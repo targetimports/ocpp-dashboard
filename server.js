@@ -1,6 +1,27 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import fs from "fs";
+
+app.get("/api/logs/:service", (req, res) => {
+  const map = {
+    dashboard: "/root/.pm2/logs/ocpp-dashboard-out.log",
+    dashboard_err: "/root/.pm2/logs/ocpp-dashboard-error.log",
+    gateway: "/root/.pm2/logs/ocpp-gateway-out.log",
+    gateway_err: "/root/.pm2/logs/ocpp-gateway-error.log",
+    nginx: "/var/log/nginx/error.log",
+  };
+
+  const file = map[req.params.service];
+  if (!file) return res.status(404).json({ ok:false });
+
+  try {
+    const data = fs.readFileSync(file, "utf8").split("\n").slice(-300).join("\n");
+    res.json({ ok:true, log:data });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});
 
 const app = express();
 app.use(express.json());
