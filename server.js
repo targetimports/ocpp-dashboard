@@ -60,5 +60,6 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`OCPP Dashboard na porta ${PORT}`);
   console.log("Gateway:", GATEWAY_URL);
+  console.log("SEND CMD:", serialNumber, action, payload);
 });
 
