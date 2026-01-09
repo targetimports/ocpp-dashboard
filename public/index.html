@@ -114,7 +114,7 @@
 
   async function refresh(){
     try{
-      const r = await fetch("/api/clients");
+      const r = await fetch("api/clients");
       const j = await r.json();
       setPill(!!j.ok);
       renderClients(j.clients || []);
