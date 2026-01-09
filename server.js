@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const app = express();
 app.use(express.json());
-
+app.get("/api/config", (req, res) => {
+  res.json({
+    ok: true,
+    gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
+  });
+});
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
