@@ -1,45 +1,26 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import fs from "fs";
-
-app.get("/api/logs/:service", (req, res) => {
-  const map = {
-    dashboard: "/root/.pm2/logs/ocpp-dashboard-out.log",
-    dashboard_err: "/root/.pm2/logs/ocpp-dashboard-error.log",
-    gateway: "/root/.pm2/logs/ocpp-gateway-out.log",
-    gateway_err: "/root/.pm2/logs/ocpp-gateway-error.log",
-    nginx: "/var/log/nginx/error.log",
-  };
-
-  const file = map[req.params.service];
-  if (!file) return res.status(404).json({ ok:false });
-
-  try {
-    const data = fs.readFileSync(file, "utf8").split("\n").slice(-300).join("\n");
-    res.json({ ok:true, log:data });
-  } catch (e) {
-    res.status(500).json({ ok:false, error:e.message });
-  }
-});
 
 const app = express();
-app.get("/health", (req, res) => res.json({ ok: true }));
-
 app.use(express.json());
-app.get("/api/config", (req, res) => {
-  res.json({
-    ok: true,
-    gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
-  });
-});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 4000);
 const GATEWAY_URL = process.env.GATEWAY_URL || "http://127.0.0.1:3000";
 
-// serve arquivos estáticos do painel
+// health
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+// expor config pro painel
+app.get("/api/config", (req, res) => {
+  res.json({ ok: true, gatewayUrl: GATEWAY_URL });
+});
+
+// servir estático do painel (se você usa pelo node)
+// se você serve pelo nginx em /painel, pode deixar assim ou remover.
 app.use("/", express.static(path.join(__dirname, "public")));
 
 // listar clientes do gateway
@@ -77,12 +58,7 @@ app.post("/api/send", async (req, res) => {
   }
 });
 
-
-
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`OCPP Dashboard na porta ${PORT}`);
   console.log("Gateway:", GATEWAY_URL);
-  console.log("SEND CMD:", serialNumber, action, payload);
 });
-
