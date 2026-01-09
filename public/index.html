@@ -283,7 +283,14 @@ function renderClients(list){
   }).join("\n");
 }
 
-  
+  function prettify(line){
+  return line
+    .replace("[WS]", "🔌 [WS]")
+    .replace("[OCPP] RX", "⬅️  [OCPP RX]")
+    .replace("[OCPP] TX", "➡️  [OCPP TX]")
+    .replace("[ERROR]", "❌ [ERROR]");
+}
+
 
 </script>
 </body>
