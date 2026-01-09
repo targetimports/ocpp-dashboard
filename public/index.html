@@ -98,6 +98,21 @@
         <span class="muted" id="hint"></span>
       </div>
     </div>
+<div class="card">
+  <b>Logs</b>
+
+  <div class="row" style="margin-top:10px">
+    <select id="logType">
+      <option value="gateway">Gateway OCPP</option>
+      <option value="gateway_err">Gateway Erros</option>
+      <option value="dashboard">Dashboard</option>
+      <option value="nginx">Nginx</option>
+    </select>
+    <button onclick="loadLogs()">Carregar</button>
+  </div>
+
+  <pre id="logsBox" style="margin-top:10px;height:300px"></pre>
+</div>
 
     <div class="card">
       <b>Resposta</b>
@@ -245,6 +260,15 @@ function renderClients(list){
 
 
   loadConfig();
+
+  async function loadLogs(){
+  const t = document.getElementById("logType").value;
+  const r = await fetch(`/api/logs/${t}`);
+  const j = await r.json();
+  document.getElementById("logsBox").textContent =
+    j.ok ? j.log : "erro ao carregar logs";
+}
+
 </script>
 </body>
 </html>
