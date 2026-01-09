@@ -118,17 +118,20 @@ async function loadConfig(){
     el.className = "pill " + (ok ? "ok" : "bad");
   }
 
-  async function refresh(){
-    try{
-      const r = await fetch("api/clients");
-      const j = await r.json();
-      setPill(!!j.ok);
-      renderClients(j.clients || []);
-    }catch(e){
-      setPill(false);
-      renderClients([]);
-    }
+async function refresh(){
+  try{
+    const r = await fetch("/api/clients");
+    const j = await r.json();
+
+    // aceita dois formatos: {ok:true, clients:[...]} OU simplesmente [...]
+    const clients = Array.isArray(j) ? j : (j.clients || []);
+    setPill(true);
+    renderClients(clients);
+  }catch(e){
+    setPill(false);
+    renderClients([]);
   }
+}
 
   function renderClients(list){
     const body = document.getElementById("clientsBody");
