@@ -53,8 +53,8 @@ app.post("/api/send", async (req, res) => {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
-
-app.listen(PORT, "127.0.0.1", () => {
-  console.log("OCPP Dashboard em http://127.0.0.1:" + PORT);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`OCPP Dashboard na porta ${PORT}`);
   console.log("Gateway:", GATEWAY_URL);
 });
+
