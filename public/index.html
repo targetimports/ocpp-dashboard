@@ -164,7 +164,7 @@
       return;
     }
 
-    const r = await fetch("/api/send", {
+    const r = await fetch("api/send", {
       method:"POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ serialNumber, action, payload })
