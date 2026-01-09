@@ -71,11 +71,32 @@ app.get("/api/clients", async (req, res) => {
   try {
     const r = await fetch(`${GATEWAY_URL}/ocpp/clients`);
     const j = await r.json();
-    res.json(j);
+
+    // Aceita formatos: [...], {clients:[...]}, {ok:true, clients:[...]}
+    const raw = Array.isArray(j) ? j : (j.clients || []);
+
+    // Normaliza para ARRAY DE STRINGS
+    const clients = raw
+      .map((c) => {
+        if (typeof c === "string") return c;
+        if (!c || typeof c !== "object") return null;
+        return (
+          c.serialNumber ||
+          c.chargePointId ||
+          c.id ||
+          c.sn ||
+          c.name ||
+          null
+        );
+      })
+      .filter(Boolean);
+
+    res.json({ ok: true, clients });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
+    res.status(500).json({ ok: false, error: String(e?.message || e), clients: [] });
   }
 });
+
 
 // enviar comando via gateway
 app.post("/api/send", async (req, res) => {
