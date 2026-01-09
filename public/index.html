@@ -59,16 +59,34 @@
 
       <div class="row" style="margin-top:12px">
         <input id="serial" placeholder="serialNumber (ex: 2222233333)" style="flex:1"/>
-        <select id="action">
-          <option>TriggerMessage</option>
-          <option>ReserveNow</option>
-          <option>CancelReservation</option>
-          <option>DataTransfer</option>
-          <option>Reset</option>
-          <option>UnlockConnector</option>
-          <option>ChangeConfiguration</option>
-          <option>GetConfiguration</option>
-        </select>
+ <select id="action">
+  <!-- Operação -->
+  <option>RemoteStartTransaction</option>
+  <option>RemoteStopTransaction</option>
+  <option>UnlockConnector</option>
+  <option>Reset</option>
+  <option>ChangeAvailability</option>
+
+  <!-- Consulta / Config -->
+  <option>GetConfiguration</option>
+  <option>ChangeConfiguration</option>
+  <option>ClearCache</option>
+
+  <!-- Diagnóstico / Firmware -->
+  <option>GetDiagnostics</option>
+  <option>UpdateFirmware</option>
+
+  <!-- Mensagens sob demanda -->
+  <option>TriggerMessage</option>
+
+  <!-- Reserva -->
+  <option>ReserveNow</option>
+  <option>CancelReservation</option>
+
+  <!-- Vendor / Proprietário -->
+  <option>DataTransfer</option>
+</select>
+
       </div>
 
       <div class="muted" style="margin-top:10px">Payload (JSON):</div>
@@ -101,16 +119,34 @@ async function loadConfig(){
     document.getElementById("gw").textContent = "(erro lendo config)";
   }
 }
-  const templates = {
-    TriggerMessage: { requestedMessage: "StatusNotification", connectorId: 1 },
-    ReserveNow: { connectorId: 1, expiryDate: new Date(Date.now()+30*60*1000).toISOString(), idTag: "ABC123", reservationId: 101 },
-    CancelReservation: { reservationId: 101 },
-    DataTransfer: { vendorId: "SeuVendor", messageId: "Hello", data: "ping" },
-    Reset: { type: "Soft" },
-    UnlockConnector: { connectorId: 1 },
-    ChangeConfiguration: { key: "WebSocketPingInterval", value: "0" },
-    GetConfiguration: { key: [] }
-  };
+const templates = {
+  // Operação
+  RemoteStartTransaction: { idTag: "TARGET001", connectorId: 1 },
+  RemoteStopTransaction: { transactionId: 12345 },
+  UnlockConnector: { connectorId: 1 },
+  Reset: { type: "Soft" }, // ou "Hard"
+  ChangeAvailability: { connectorId: 1, type: "Operative" }, // ou "Inoperative"
+
+  // Config
+  GetConfiguration: { key: [] }, // [] = tudo
+  ChangeConfiguration: { key: "HeartbeatInterval", value: "60" },
+  ClearCache: {},
+
+  // Diagnóstico / Firmware
+  GetDiagnostics: { location: "https://ocpptarget.cloud/diag", retries: 1, retryInterval: 60 },
+  UpdateFirmware: { location: "https://ocpptarget.cloud/fw.bin", retries: 1, retrieveDate: new Date(Date.now()+5*60*1000).toISOString() },
+
+  // Mensagens sob demanda
+  TriggerMessage: { requestedMessage: "StatusNotification", connectorId: 1 },
+
+  // Reserva
+  ReserveNow: { connectorId: 1, expiryDate: new Date(Date.now()+30*60*1000).toISOString(), idTag: "TARGET001", reservationId: 101 },
+  CancelReservation: { reservationId: 101 },
+
+  // Vendor
+  DataTransfer: { vendorId: "SeuVendor", messageId: "Hello", data: "ping" },
+};
+
 
   function setPill(ok){
     const el = document.getElementById("statusPill");
