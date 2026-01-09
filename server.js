@@ -17,14 +17,18 @@ app.get("/api/logs/:service", (req, res) => {
   const home = process.env.HOME || "/root";
   const pm2LogsRoot = `${home}/.pm2/logs`;
 
-  const map = {
-    dashboard: `${pm2LogsRoot}/ocpp-dashboard-out.log`,
-    dashboard_err: `${pm2LogsRoot}/ocpp-dashboard-error.log`,
-    gateway: `${pm2LogsRoot}/ocpp-gateway-out.log`,
-    gateway_err: `${pm2LogsRoot}/ocpp-gateway-error.log`,
-    nginx: `/var/log/nginx/error.log`,
-    nginx_access: `/var/log/nginx/access.log`,
-  };
+const map = {
+  dashboard: `/root/.pm2/logs/ocpp-dashboard-out.log`,
+  dashboard_err: `/root/.pm2/logs/ocpp-dashboard-error.log`,
+
+  // ✅ Gateway OCPP (processo: ocpp-server)
+  gateway: `/root/.pm2/logs/ocpp-server-out.log`,
+  gateway_err: `/root/.pm2/logs/ocpp-server-error.log`,
+
+  nginx: `/var/log/nginx/error.log`,
+  nginx_access: `/var/log/nginx/access.log`,
+};
+
 
   const key = req.params.service;
   const file = map[key];
