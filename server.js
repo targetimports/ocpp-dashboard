@@ -3,6 +3,45 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const app = express();
+
+import fs from "node:fs";
+
+function tailFile(filePath, lines = 300) {
+  const data = fs.readFileSync(filePath, "utf8");
+  const arr = data.split("\n");
+  return arr.slice(-lines).join("\n");
+}
+
+app.get("/api/logs/:service", (req, res) => {
+  // Ajuste caminhos conforme onde o PM2 está rodando (root vs ubuntu)
+  const home = process.env.HOME || "/root";
+  const pm2LogsRoot = `${home}/.pm2/logs`;
+
+  const map = {
+    dashboard: `${pm2LogsRoot}/ocpp-dashboard-out.log`,
+    dashboard_err: `${pm2LogsRoot}/ocpp-dashboard-error.log`,
+    gateway: `${pm2LogsRoot}/ocpp-gateway-out.log`,
+    gateway_err: `${pm2LogsRoot}/ocpp-gateway-error.log`,
+    nginx: `/var/log/nginx/error.log`,
+    nginx_access: `/var/log/nginx/access.log`,
+  };
+
+  const key = req.params.service;
+  const file = map[key];
+
+  if (!file) return res.status(404).json({ ok: false, error: "unknown service" });
+
+  try {
+    if (!fs.existsSync(file)) {
+      return res.status(404).json({ ok: false, error: `file not found: ${file}` });
+    }
+    const log = tailFile(file, 400);
+    res.json({ ok: true, file, log });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e), file });
+  }
+});
+
 app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
