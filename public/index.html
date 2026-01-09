@@ -92,9 +92,15 @@
 
 <script>
   // Ajuste aqui se o gateway não estiver em 127.0.0.1:3000 (normalmente está)
-  const GW = "http://127.0.0.1:3000";
-  document.getElementById("gw").textContent = GW;
-
+async function loadConfig(){
+  try{
+    const r = await fetch("/api/config");
+    const j = await r.json();
+    document.getElementById("gw").textContent = j.gatewayUrl || "(indefinido)";
+  }catch(e){
+    document.getElementById("gw").textContent = "(erro lendo config)";
+  }
+}
   const templates = {
     TriggerMessage: { requestedMessage: "StatusNotification", connectorId: 1 },
     ReserveNow: { connectorId: 1, expiryDate: new Date(Date.now()+30*60*1000).toISOString(), idTag: "ABC123", reservationId: 101 },
