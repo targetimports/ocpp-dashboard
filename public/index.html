@@ -133,27 +133,28 @@ async function refresh(){
   }
 }
 
-  function renderClients(list){
-    const body = document.getElementById("clientsBody");
-    if(!list.length){
-      body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
-      return;
-    }
-
-    let html = "";
-    for (const sn of list) {
-      html +=
-        '<tr>' +
-          '<td><b>' + sn + '</b></td>' +
-          '<td class="row">' +
-            '<button onclick="quick(\\'' + sn + '\\',\\'Status\\')">Trigger Status</button>' +
-            '<button onclick="quick(\\'' + sn + '\\',\\'Meter\\')">Trigger Meter</button>' +
-            '<button onclick="quick(\\'' + sn + '\\',\\'SoftReset\\')">Soft Reset</button>' +
-          '</td>' +
-        '</tr>';
-    }
-    body.innerHTML = html;
+function renderClients(list){
+  const body = document.getElementById("clientsBody");
+  if(!list.length){
+    body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
+    return;
   }
+
+  let html = "";
+  for (const sn of list) {
+    html +=
+      '<tr>' +
+        '<td><b>' + sn + '</b></td>' +
+        '<td class="row">' +
+          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;Status&quot;)">Trigger Status</button>' +
+          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;Meter&quot;)">Trigger Meter</button>' +
+          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;SoftReset&quot;)">Soft Reset</button>' +
+        '</td>' +
+      '</tr>';
+  }
+  body.innerHTML = html;
+}
+
 
   function fillTemplate(){
     const action = document.getElementById("action").value;
