@@ -24,6 +24,8 @@ app.get("/api/logs/:service", (req, res) => {
 });
 
 const app = express();
+app.get("/health", (req, res) => res.json({ ok: true }));
+
 app.use(express.json());
 app.get("/api/config", (req, res) => {
   res.json({
@@ -75,7 +77,7 @@ app.post("/api/send", async (req, res) => {
   }
 });
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+
 
 
 app.listen(PORT, "0.0.0.0", () => {
