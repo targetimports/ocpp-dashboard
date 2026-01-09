@@ -266,8 +266,24 @@ function renderClients(list){
   const r = await fetch(`/api/logs/${t}`);
   const j = await r.json();
   document.getElementById("logsBox").textContent =
-    j.ok ? j.log : "erro ao carregar logs";
+  j.ok ? formatLog(j.log) : "erro ao carregar logs";
 }
+
+  function formatLog(text){
+  return text.split("\n").map(line => {
+    if (line.includes("ERROR") || line.includes("Error"))
+      return "❌ " + line;
+    if (line.includes("RX") || line.includes("<<"))
+      return "⬅️  " + line;
+    if (line.includes("TX") || line.includes(">>"))
+      return "➡️  " + line;
+    if (line.includes("WS") || line.includes("connected"))
+      return "🔌 " + line;
+    return "• " + line;
+  }).join("\n");
+}
+
+  
 
 </script>
 </body>
