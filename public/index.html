@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OCPP Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#0b0f14;color:#e6edf3}
+    header{padding:16px 20px;border-bottom:1px solid #1f2a37;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .wrap{padding:18px 20px;max-width:1100px;margin:auto}
+    .card{background:#0f1620;border:1px solid #1f2a37;border-radius:12px;padding:14px;margin:12px 0}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input,select,button,textarea{background:#0b0f14;color:#e6edf3;border:1px solid #2b3a4c;border-radius:10px;padding:10px}
+    button{cursor:pointer}
+    button:hover{border-color:#8b5cf6}
+    .pill{padding:4px 10px;border-radius:999px;border:1px solid #2b3a4c;font-size:12px}
+    .ok{border-color:#22c55e;color:#22c55e}
+    .bad{border-color:#ef4444;color:#ef4444}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2a37;padding:10px;text-align:left}
+    .muted{color:#9aa4b2;font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+    pre{white-space:pre-wrap;background:#0b0f14;border:1px solid #1f2a37;border-radius:12px;padding:12px;max-height:260px;overflow:auto}
+    code{color:#c084fc}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div style="font-size:18px;font-weight:700">OCPP Dashboard</div>
+    <div class="muted">Online, comandos e debug rápido</div>
+  </div>
+  <div class="row">
+    <span id="statusPill" class="pill bad">desconhecido</span>
+    <button onclick="refresh()">Atualizar</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><b>Carregadores online</b> <span class="muted">(poll automático)</span></div>
+      <div class="muted">Gateway: <span id="gw"></span></div>
+    </div>
+    <div style="margin-top:10px">
+      <table>
+        <thead><tr><th>Serial</th><th>Ações rápidas</th></tr></thead>
+        <tbody id="clientsBody"><tr><td colspan="2" class="muted">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <b>Enviar comando</b>
+      <div class="muted" style="margin-top:6px">O painel chama <code>/api/send</code> (que repassa para o gateway).</div>
+
+      <div class="row" style="margin-top:12px">
+        <input id="serial" placeholder="serialNumber (ex: 2222233333)" style="flex:1"/>
+        <select id="action">
+          <option>TriggerMessage</option>
+          <option>ReserveNow</option>
+          <option>CancelReservation</option>
+          <option>DataTransfer</option>
+          <option>Reset</option>
+          <option>UnlockConnector</option>
+          <option>ChangeConfiguration</option>
+          <option>GetConfiguration</option>
+        </select>
+      </div>
+
+      <div class="muted" style="margin-top:10px">Payload (JSON):</div>
+      <textarea id="payload" rows="10" style="width:100%;margin-top:6px">{}</textarea>
+
+      <div class="row" style="margin-top:12px">
+        <button onclick="sendCmd()">Enviar</button>
+        <button onclick="fillTemplate()">Template</button>
+        <span class="muted" id="hint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Resposta</b>
+      <div class="muted" style="margin-top:6px">Retorno do gateway.</div>
+      <pre id="resp">{}</pre>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Ajuste aqui se o gateway não estiver em 127.0.0.1:3000 (normalmente está)
+  const GW = "http://127.0.0.1:3000";
+  document.getElementById("gw").textContent = GW;
+
+  const templates = {
+    TriggerMessage: { requestedMessage: "StatusNotification", connectorId: 1 },
+    ReserveNow: { connectorId: 1, expiryDate: new Date(Date.now()+30*60*1000).toISOString(), idTag: "ABC123", reservationId: 101 },
+    CancelReservation: { reservationId: 101 },
+    DataTransfer: { vendorId: "SeuVendor", messageId: "Hello", data: "ping" },
+    Reset: { type: "Soft" },
+    UnlockConnector: { connectorId: 1 },
+    ChangeConfiguration: { key: "WebSocketPingInterval", value: "0" },
+    GetConfiguration: { key: [] }
+  };
+
+  function setPill(ok){
+    const el = document.getElementById("statusPill");
+    el.textContent = ok ? "gateway ok" : "gateway erro";
+    el.className = "pill " + (ok ? "ok" : "bad");
+  }
+
+  async function refresh(){
+    try{
+      const r = await fetch("/api/clients");
+      const j = await r.json();
+      setPill(!!j.ok);
+      renderClients(j.clients || []);
+    }catch(e){
+      setPill(false);
+      renderClients([]);
+    }
+  }
+
+  function renderClients(list){
+    const body = document.getElementById("clientsBody");
+    if(!list.length){
+      body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
+      return;
+    }
+
+    let html = "";
+    for (const sn of list) {
+      html +=
+        '<tr>' +
+          '<td><b>' + sn + '</b></td>' +
+          '<td class="row">' +
+            '<button onclick="quick(\\'' + sn + '\\',\\'Status\\')">Trigger Status</button>' +
+            '<button onclick="quick(\\'' + sn + '\\',\\'Meter\\')">Trigger Meter</button>' +
+            '<button onclick="quick(\\'' + sn + '\\',\\'SoftReset\\')">Soft Reset</button>' +
+          '</td>' +
+        '</tr>';
+    }
+    body.innerHTML = html;
+  }
+
+  function fillTemplate(){
+    const action = document.getElementById("action").value;
+    document.getElementById("payload").value = JSON.stringify(templates[action] || {}, null, 2);
+    document.getElementById("hint").textContent = "template aplicado";
+  }
+
+  async function sendCmd(){
+    const serialNumber = document.getElementById("serial").value.trim();
+    const action = document.getElementById("action").value;
+
+    let payload = {};
+    try{
+      payload = JSON.parse(document.getElementById("payload").value || "{}");
+    }catch(e){
+      document.getElementById("resp").textContent = "Payload JSON inválido.";
+      return;
+    }
+
+    const r = await fetch("/api/send", {
+      method:"POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ serialNumber, action, payload })
+    });
+
+    const txt = await r.text();
+    document.getElementById("resp").textContent = txt;
+  }
+
+  async function quick(sn, type){
+    document.getElementById("serial").value = sn;
+
+    if(type === "Status"){
+      document.getElementById("action").value = "TriggerMessage";
+      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"StatusNotification", connectorId:1 }, null, 2);
+    }
+    if(type === "Meter"){
+      document.getElementById("action").value = "TriggerMessage";
+      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"MeterValues", connectorId:1 }, null, 2);
+    }
+    if(type === "SoftReset"){
+      document.getElementById("action").value = "Reset";
+      document.getElementById("payload").value = JSON.stringify({ type:"Soft" }, null, 2);
+    }
+
+    await sendCmd();
+  }
+
+  fillTemplate();
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
