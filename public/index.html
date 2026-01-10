@@ -6,34 +6,24 @@
   <title>OCPP Dashboard</title>
   <style>
     :root {
-      --bg: #0b0b12;
-      --bg-panel: #12121e;
-      --bg-panel2: #161624;
-      --bg-panel3: #1a1a2e;
-      --bg-gradient: linear-gradient(145deg, #0f0f1a, #0b0b12);
-      --primary: #8b5cf6;
-      --primary-dark: #7c3aed;
-      --primary-light: rgba(139, 92, 246, 0.1);
-      --secondary: #06b6d4;
+      --bg: #0a0a14;
+      --bg-panel: #12121c;
+      --bg-panel2: #181826;
+      --bg-panel3: #1c1c2e;
+      --primary: #7c3aed;
+      --primary-light: rgba(124, 58, 237, 0.15);
       --success: #10b981;
       --warning: #f59e0b;
       --danger: #ef4444;
       --info: #3b82f6;
-      --text: #f8fafc;
+      --text: #f1f5f9;
       --text-muted: #94a3b8;
-      --text-light: #cbd5e1;
       --border: rgba(255, 255, 255, 0.08);
       --border-light: rgba(255, 255, 255, 0.12);
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-      --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.35);
-      --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-      --radius-sm: 8px;
-      --radius: 12px;
-      --radius-lg: 16px;
-      --radius-xl: 20px;
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      --glass: rgba(255, 255, 255, 0.02);
-      --glass-border: rgba(255, 255, 255, 0.05);
+      --radius: 8px;
+      --radius-sm: 6px;
+      --radius-lg: 10px;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
     * {
@@ -43,291 +33,272 @@
     }
 
     body {
-      background: var(--bg-gradient);
+      background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      line-height: 1.5;
-      min-height: 100vh;
-      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.4;
+      font-size: 14px;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    /* Header */
+    /* Header Compact */
     header {
-      background: rgba(11, 11, 18, 0.85);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      background: var(--bg-panel);
       border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1rem;
       position: sticky;
       top: 0;
       z-index: 100;
-      padding: 1rem 1.5rem;
     }
 
     .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1.5rem;
+      max-width: 100%;
     }
 
     .brand {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.125rem;
     }
 
     .brand h1 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--primary);
     }
 
     .brand-subtitle {
       color: var(--text-muted);
-      font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .brand-subtitle::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      background: var(--success);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    /* Status Indicators */
-    .status-indicators {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+      font-size: 0.75rem;
     }
 
     .status-pill {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: var(--bg-panel);
+      padding: 0.375rem 0.75rem;
+      background: var(--bg-panel2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
-      transition: var(--transition);
+      min-width: 140px;
     }
 
-    .status-pill:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow);
-    }
-
-    .status-pill.ok {
-      background: rgba(16, 185, 129, 0.1);
-      border-color: rgba(16, 185, 129, 0.2);
-      color: var(--success);
-    }
-
-    .status-pill.warn {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.2);
-      color: var(--warning);
-    }
-
-    .status-pill.bad {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
-      color: var(--danger);
-    }
+    .status-pill.ok { border-color: var(--success); color: var(--success); }
+    .status-pill.warn { border-color: var(--warning); color: var(--warning); }
+    .status-pill.bad { border-color: var(--danger); color: var(--danger); }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: currentColor;
     }
 
     .btn-icon {
-      background: var(--bg-panel);
+      background: var(--bg-panel2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
-      padding: 0.75rem;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
     }
 
     .btn-icon:hover {
       background: var(--primary-light);
       border-color: var(--primary);
-      transform: translateY(-1px);
     }
 
-    /* Main Layout */
+    /* Main Container - Altura máxima */
     .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 1.5rem;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      padding: 0.75rem;
     }
 
-    /* Stats Cards */
-    .stats-grid {
+    /* Stats Row - Linha única */
+    .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
     }
 
     .stat-card {
       background: var(--bg-panel);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      transition: var(--transition);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      opacity: 0.7;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--primary);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
     }
 
     .stat-label {
       color: var(--text-muted);
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
     }
 
     .stat-value {
-      font-size: 2rem;
+      font-size: 1.25rem;
       font-weight: 700;
-      background: linear-gradient(135deg, var(--text), var(--text-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
 
-    /* Main Grid */
+    /* Main Grid Compacto */
     .main-grid {
       display: grid;
       grid-template-columns: 1fr 1.2fr 1.3fr;
-      gap: 1.5rem;
-      align-items: start;
+      gap: 0.75rem;
+      height: calc(100vh - 160px);
+      min-height: 500px;
     }
 
     @media (max-width: 1200px) {
       .main-grid {
         grid-template-columns: 1fr 1fr;
+        height: auto;
       }
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 768px) {
       .main-grid {
         grid-template-columns: 1fr;
+        height: auto;
       }
     }
 
-    /* Cards */
+    /* Cards Compactos */
     .card {
       background: var(--bg-panel);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      box-shadow: var(--shadow);
-      transition: var(--transition);
-    }
-
-    .card:hover {
-      box-shadow: var(--shadow-lg);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
     }
 
     .card-title {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      font-size: 1.125rem;
+      gap: 0.5rem;
+      font-size: 0.875rem;
       font-weight: 600;
     }
 
     .card-title-icon {
-      width: 36px;
-      height: 36px;
+      width: 24px;
+      height: 24px;
       background: var(--primary-light);
-      border-radius: 10px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--primary);
+      font-size: 0.75rem;
     }
 
-    /* Table */
-    .table-container {
-      overflow-x: auto;
-      border-radius: var(--radius);
+    /* Conteúdo com scroll interno */
+    .card-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* Toolbar Compact */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--bg-panel2);
       border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      background: var(--bg-panel3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--warning);
+    }
+
+    /* Tabela Compacta */
+    .table-container {
+      flex: 1;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 500px;
+      min-width: 400px;
     }
 
     th {
       background: var(--bg-panel2);
       color: var(--text-muted);
+      font-size: 0.6875rem;
       font-weight: 600;
-      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 1rem;
-      text-align: left;
+      padding: 0.5rem;
       border-bottom: 1px solid var(--border);
+      white-space: nowrap;
     }
 
     td {
-      padding: 1rem;
+      padding: 0.5rem;
       border-bottom: 1px solid var(--border);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
     }
 
     tr:last-child td {
@@ -338,246 +309,117 @@
       background: var(--primary-light);
     }
 
-    /* Form Elements */
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    .form-label {
-      display: block;
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-bottom: 0.5rem;
-    }
-
+    /* Form Elements Compact */
     .input-group {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
     }
 
-    @media (max-width: 640px) {
-      .input-group {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    input, select, textarea {
+    input, select {
       width: 100%;
       background: var(--bg-panel2);
       color: var(--text);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.75rem 1rem;
-      font-family: inherit;
-      font-size: 0.875rem;
-      transition: var(--transition);
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--primary-light);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 150px;
-      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      border-radius: var(--radius-sm);
+      padding: 0.5rem;
       font-size: 0.8125rem;
     }
 
-    /* Buttons */
+    textarea {
+      width: 100%;
+      background: var(--bg-panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem;
+      font-family: 'Consolas', monospace;
+      font-size: 0.75rem;
+      min-height: 120px;
+      resize: vertical;
+      flex: 1;
+    }
+
+    /* Buttons Compact */
     .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: var(--radius);
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
       font-weight: 500;
-      font-size: 0.875rem;
       border: none;
       cursor: pointer;
-      transition: var(--transition);
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+      gap: 0.375rem;
+      transition: all 0.2s;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      background: var(--primary);
       color: white;
     }
 
     .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      opacity: 0.9;
     }
 
     .btn-secondary {
-      background: var(--bg-panel2);
+      background: var(--bg-panel3);
       border: 1px solid var(--border);
       color: var(--text);
     }
 
     .btn-secondary:hover {
-      background: var(--bg-panel3);
+      background: var(--bg-panel2);
       border-color: var(--primary);
     }
 
     .btn-group {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.25rem;
       flex-wrap: wrap;
     }
 
     .btn-sm {
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
     }
 
-    /* Tags & Badges */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      padding: 0.25rem 0.75rem;
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .badge-success {
-      background: rgba(16, 185, 129, 0.1);
-      border-color: rgba(16, 185, 129, 0.2);
-      color: var(--success);
-    }
-
-    .badge-warning {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.2);
-      color: var(--warning);
-    }
-
-    .badge-danger {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
-      color: var(--danger);
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      padding: 0.375rem 0.75rem;
-      background: var(--primary-light);
-      color: var(--primary);
-      border-radius: var(--radius);
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    /* Code Blocks */
+    /* Code Blocks Compact */
     .code-block {
       background: var(--bg-panel2);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-      font-size: 0.8125rem;
-      overflow-x: auto;
-      max-height: 300px;
-      overflow-y: auto;
+      border-radius: var(--radius-sm);
+      padding: 0.5rem;
+      font-family: 'Consolas', monospace;
+      font-size: 0.75rem;
+      flex: 1;
+      overflow: auto;
+      min-height: 120px;
     }
 
     .code-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .code-title {
+      margin-bottom: 0.5rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
-
-    /* Toolbar */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem;
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 1rem;
-    }
-
-    .toolbar-section {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
     }
 
     /* Empty States */
     .empty-state {
       text-align: center;
-      padding: 3rem 1.5rem;
+      padding: 1rem;
       color: var(--text-muted);
+      font-size: 0.8125rem;
     }
 
-    .empty-state-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      opacity: 0.3;
-    }
-
-    /* Animations */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .fade-in {
-      animation: fadeIn 0.3s ease-out;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .header-content {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
-      }
-      
-      .status-indicators {
-        justify-content: space-between;
-      }
-      
-      .container {
-        padding: 1rem;
-      }
-      
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .card {
-        padding: 1rem;
-      }
-    }
-
-    /* Scrollbar */
+    /* Scrollbar fina */
     ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
@@ -586,11 +428,26 @@
 
     ::-webkit-scrollbar-thumb {
       background: var(--border);
-      border-radius: var(--radius);
+      border-radius: 3px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
       background: var(--primary);
+    }
+
+    /* Responsive compact */
+    @media (max-width: 1024px) {
+      .container {
+        padding: 0.5rem;
+      }
+      
+      .main-grid {
+        gap: 0.5rem;
+      }
+      
+      .card {
+        padding: 0.5rem;
+      }
     }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -601,43 +458,41 @@
   <div class="header-content">
     <div class="brand">
       <h1>OCPP Dashboard</h1>
-      <div class="brand-subtitle">
-        Monitoramento em tempo real • Controle remoto • Logs detalhados
-      </div>
+      <div class="brand-subtitle">Monitoramento • Controle • Logs</div>
     </div>
     
-    <div class="status-indicators">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
       <div id="statusPill" class="status-pill bad">
         <span class="status-dot"></span>
         <span id="statusText">Conectando...</span>
       </div>
-      <button class="btn-icon" onclick="refreshClients()" title="Atualizar lista">
-        <i class="fas fa-sync-alt"></i>
+      <button class="btn-icon" onclick="refreshClients()" title="Atualizar">
+        <i class="fas fa-sync-alt fa-xs"></i>
       </button>
     </div>
   </div>
 </header>
 
 <div class="container">
-  <!-- Stats Cards -->
-  <div class="stats-grid">
+  <!-- Stats Row -->
+  <div class="stats-row">
     <div class="stat-card">
-      <div class="stat-label">Gateway Status</div>
-      <div class="stat-value" id="gw">Conectando...</div>
+      <div class="stat-label">Gateway</div>
+      <div class="stat-value" id="gw">-</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Carregadores Online</div>
+      <div class="stat-label">Online</div>
       <div class="stat-value" id="onlineCount">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Ultima Atualização</div>
-      <div class="stat-value" id="lastUpdate">Agora</div>
+      <div class="stat-label">Última Atualização</div>
+      <div class="stat-value" id="lastUpdate">-</div>
     </div>
   </div>
 
   <!-- Main Grid -->
   <div class="main-grid">
-    <!-- Column 1: Online Chargers -->
+    <!-- Coluna 1: Carregadores -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">
@@ -646,57 +501,46 @@
           </div>
           <span>Carregadores Online</span>
         </div>
-        <div class="tag">
-          <i class="fas fa-satellite-dish"></i>
-          <span id="onlineCountBadge">0</span>
-        </div>
+        <div class="badge badge-success" id="onlineBadge">0</div>
       </div>
       
       <div class="toolbar">
-        <div class="toolbar-section">
-          <div class="badge">
-            <i class="fas fa-clock"></i>
-            <span>Poll: </span>
-            <select id="pollSec" onchange="setPoll()" style="background: transparent; border: none; color: inherit;">
-              <option value="2">2s</option>
-              <option value="3" selected>3s</option>
-              <option value="5">5s</option>
-              <option value="10">10s</option>
-            </select>
-          </div>
-        </div>
-        <div class="toolbar-section">
-          <div class="badge">
-            <i class="fas fa-search"></i>
-            <input id="search" oninput="renderClients()" placeholder="Buscar serial..." 
-                   style="background: transparent; border: none; color: inherit; min-width: 120px;">
-          </div>
+        <select id="pollSec" onchange="setPoll()" style="flex: 1;">
+          <option value="2">Poll: 2s</option>
+          <option value="3" selected>Poll: 3s</option>
+          <option value="5">Poll: 5s</option>
+          <option value="10">Poll: 10s</option>
+        </select>
+        <div class="badge">
+          <i class="fas fa-search"></i>
+          <input id="search" oninput="renderClients()" placeholder="Buscar serial..." 
+                 style="background: transparent; border: none; color: inherit; width: 100px;">
         </div>
       </div>
       
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Serial</th>
-              <th>Ações Rápidas</th>
-            </tr>
-          </thead>
-          <tbody id="clientsBody">
-            <tr>
-              <td colspan="2" class="empty-state">
-                <div class="empty-state-icon">
-                  <i class="fas fa-plug"></i>
-                </div>
-                <div>Carregando dispositivos...</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="card-content">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Serial</th>
+                <th style="width: 120px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="clientsBody">
+              <tr>
+                <td colspan="2" class="empty-state">
+                  <i class="fas fa-plug"></i><br>
+                  Carregando...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Column 2: Commands -->
+    <!-- Coluna 2: Comandos -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">
@@ -705,81 +549,53 @@
           </div>
           <span>Enviar Comando</span>
         </div>
-        <div class="badge badge-success">
-          <i class="fas fa-exchange-alt"></i>
-          <span>CS → CP</span>
-        </div>
+        <div class="badge">CS → CP</div>
       </div>
       
-      <div class="form-group">
+      <div class="card-content" style="gap: 0.75rem;">
         <div class="input-group">
-          <div>
-            <label class="form-label">Serial Number</label>
-            <input id="serial" placeholder="Ex: 2222233333" />
-          </div>
-          <div>
-            <label class="form-label">Ação OCPP</label>
-            <select id="action" onchange="applyTemplate()"></select>
-          </div>
+          <input id="serial" placeholder="Serial Number" />
+          <select id="action" onchange="applyTemplate()"></select>
         </div>
-      </div>
-      
-      <div class="toolbar">
-        <div class="toolbar-section">
-          <div class="badge">
+        
+        <div class="toolbar" style="margin: 0;">
+          <div class="badge" style="flex: 1;">
             <i class="fas fa-file-code"></i>
             <span>Template: </span>
             <strong id="tplName">—</strong>
           </div>
-          <div class="badge badge-warning" id="hint">
-            <i class="fas fa-lightbulb"></i>
-            <span>Selecione uma ação</span>
-          </div>
-        </div>
-        <div class="toolbar-section">
           <button class="btn btn-secondary btn-sm" onclick="applyTemplate()">
-            <i class="fas fa-magic"></i>Aplicar Template
+            <i class="fas fa-magic"></i>
           </button>
           <button class="btn btn-secondary btn-sm" onclick="clearPayload()">
-            <i class="fas fa-eraser"></i>Limpar
+            <i class="fas fa-eraser"></i>
           </button>
         </div>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Payload JSON</label>
-        <textarea id="payload" rows="8">{}</textarea>
-      </div>
-      
-      <div class="toolbar">
-        <div class="toolbar-section">
-          <button class="btn btn-primary" onclick="sendCmd()">
-            <i class="fas fa-paper-plane"></i>Enviar Comando
+        
+        <textarea id="payload" placeholder="Payload JSON...">{}</textarea>
+        
+        <div class="toolbar" style="margin: 0;">
+          <button class="btn btn-primary" onclick="sendCmd()" style="flex: 1;">
+            <i class="fas fa-paper-plane"></i> Enviar
           </button>
           <button class="btn btn-secondary" onclick="copyPayload()">
-            <i class="fas fa-copy"></i>Copiar Payload
-          </button>
-        </div>
-        <div class="toolbar-section">
-          <span class="badge">
-            <i class="fas fa-history"></i>
-            <span>Resposta abaixo</span>
-          </span>
-        </div>
-      </div>
-      
-      <div class="code-block">
-        <div class="code-header">
-          <div class="code-title">Resposta do Gateway</div>
-          <button class="btn btn-secondary btn-sm" onclick="copyResponse()">
             <i class="fas fa-copy"></i>
           </button>
         </div>
-        <pre id="resp">{}</pre>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span>Resposta</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyResponse()">
+              <i class="fas fa-copy fa-xs"></i>
+            </button>
+          </div>
+          <pre id="resp" style="margin: 0; white-space: pre-wrap; word-break: break-all;">{}</pre>
+        </div>
       </div>
     </div>
 
-    <!-- Column 3: Logs -->
+    <!-- Coluna 3: Logs -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">
@@ -788,15 +604,14 @@
           </div>
           <span>Logs do Sistema</span>
         </div>
-        <div class="badge badge-info">
-          <i class="fas fa-stream"></i>
-          <span>Tempo Real</span>
+        <div class="badge badge-warning">
+          <i class="fas fa-sync fa-spin"></i>
         </div>
       </div>
       
-      <div class="toolbar">
-        <div class="toolbar-section">
-          <select id="logType" style="min-width: 160px;">
+      <div class="card-content" style="gap: 0.75rem;">
+        <div class="toolbar">
+          <select id="logType" style="flex: 1;">
             <option value="gateway">Gateway OCPP</option>
             <option value="gateway_err">Gateway Erros</option>
             <option value="dashboard">Dashboard</option>
@@ -805,49 +620,36 @@
             <option value="nginx_access">Nginx Access</option>
           </select>
           <button class="btn btn-secondary" onclick="loadLogs(true)">
-            <i class="fas fa-redo"></i>Carregar
+            <i class="fas fa-redo"></i>
           </button>
         </div>
-        <div class="toolbar-section">
-          <div class="badge">
-            <i class="fas fa-filter"></i>
-            <span>Modo: </span>
-            <select id="logMode" onchange="resetLogState()" 
-                    style="background: transparent; border: none; color: inherit;">
-              <option value="full" selected>Completo</option>
-              <option value="new">Somente novos</option>
-            </select>
-          </div>
-          <div class="badge">
-            <i class="fas fa-sync"></i>
-            <span>Poll: </span>
-            <select id="logPollSec" onchange="setLogPoll()" 
-                    style="background: transparent; border: none; color: inherit;">
-              <option value="1">1s</option>
-              <option value="2" selected>2s</option>
-              <option value="5">5s</option>
-              <option value="10">10s</option>
-            </select>
-          </div>
+        
+        <div class="toolbar" style="margin: 0;">
+          <select id="logMode" onchange="resetLogState()" style="flex: 1;">
+            <option value="full" selected>Modo: Completo</option>
+            <option value="new">Modo: Somente novos</option>
+          </select>
+          <select id="logPollSec" onchange="setLogPoll()" style="flex: 1;">
+            <option value="2">Poll: 2s</option>
+            <option value="5">Poll: 5s</option>
+            <option value="10">Poll: 10s</option>
+          </select>
           <button class="btn btn-secondary btn-sm" onclick="clearLogsBox()">
             <i class="fas fa-trash"></i>
           </button>
         </div>
-      </div>
-      
-      <div class="code-block" style="max-height: 400px;">
-        <div class="code-header">
-          <div class="code-title">Logs em Tempo Real</div>
-          <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="copyLogs()">
-              <i class="fas fa-copy"></i>
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="exportLogs()">
-              <i class="fas fa-download"></i>
-            </button>
+        
+        <div class="code-block" style="flex: 1;">
+          <div class="code-header">
+            <span>Logs em Tempo Real</span>
+            <div class="btn-group">
+              <button class="btn btn-secondary btn-sm" onclick="copyLogs()">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
           </div>
+          <pre id="logsBox" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Aguardando logs...</pre>
         </div>
-        <pre id="logsBox">Aguardando logs...</pre>
       </div>
     </div>
   </div>
@@ -882,18 +684,12 @@
   function fillActions(){
     const sel = document.getElementById("action");
     sel.innerHTML = "";
-    const groups = [...new Set(COMMANDS.map(c => c.group))];
-    
-    groups.forEach(g => {
-      const og = document.createElement("optgroup");
-      og.label = g;
-      COMMANDS.filter(c => c.group === g).forEach(c => {
-        const op = document.createElement("option");
-        op.value = c.action;
-        op.textContent = c.action;
-        og.appendChild(op);
-      });
-      sel.appendChild(og);
+    COMMANDS.forEach(c => {
+      const op = document.createElement("option");
+      op.value = c.action;
+      op.textContent = c.action;
+      op.title = c.group;
+      sel.appendChild(op);
     });
   }
 
@@ -908,18 +704,19 @@
   function setPill(state){
     const pill = document.getElementById("statusPill");
     const text = document.getElementById("statusText");
-    pill.classList.remove("ok","warn","bad");
-    pill.classList.add(state);
-    text.textContent = state === "ok" ? "Gateway Online" : state === "warn" ? "Gateway Parcial" : "Gateway Offline";
+    pill.className = `status-pill ${state}`;
+    text.textContent = state === "ok" ? "Online" : state === "warn" ? "Parcial" : "Offline";
   }
 
   async function loadConfig(){
     try{
       const r = await fetch("/api/config");
       const j = await r.json();
-      document.getElementById("gw").textContent = j.gatewayUrl?.split('//')[1] || "Indefinido";
+      const url = j.gatewayUrl || "";
+      const display = url.split('//')[1] || url || "Indefinido";
+      document.getElementById("gw").textContent = display.length > 20 ? display.substring(0,20)+"..." : display;
     }catch(e){
-      document.getElementById("gw").textContent = "Erro de conexão";
+      document.getElementById("gw").textContent = "Erro";
     }
   }
 
@@ -947,7 +744,7 @@
   function updateLastUpdate(){
     const now = new Date();
     document.getElementById("lastUpdate").textContent = 
-      `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+      `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
   }
 
   function normalizeSerial(x){
@@ -965,45 +762,37 @@
     const count = filtered.length;
     
     document.getElementById("onlineCount").textContent = count;
-    document.getElementById("onlineCountBadge").textContent = count;
+    document.getElementById("onlineBadge").textContent = count;
     
     if(!count){
       body.innerHTML = `
         <tr>
           <td colspan="2" class="empty-state">
-            <div class="empty-state-icon">
-              <i class="fas fa-wifi-slash"></i>
-            </div>
-            <div>Nenhum carregador online</div>
-            <div style="font-size:0.75rem; margin-top:0.5rem;">Clique em <i class="fas fa-sync-alt"></i> para atualizar</div>
+            <i class="fas fa-wifi-slash"></i><br>
+            Nenhum online
           </td>
         </tr>`;
       return;
     }
     
     body.innerHTML = filtered.map(sn => `
-      <tr class="fade-in">
+      <tr>
         <td>
-          <div style="display:flex; align-items:center; gap:0.75rem;">
-            <div style="width:8px; height:8px; background:var(--success); border-radius:50%;"></div>
-            <div>
-              <strong style="cursor:pointer" onclick="pickSerial('${escapeHtml(sn)}')">${escapeHtml(sn)}</strong>
-              <div style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem;">
-                <i class="fas fa-satellite"></i> Conectado via Gateway
-              </div>
-            </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 6px; height: 6px; background: var(--success); border-radius: 50%;"></div>
+            <strong style="cursor: pointer" onclick="pickSerial('${escapeHtml(sn)}')">${escapeHtml(sn)}</strong>
           </div>
         </td>
         <td>
           <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Status')">
-              <i class="fas fa-chart-bar"></i>Status
+            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Status')" title="Status">
+              <i class="fas fa-chart-bar"></i>
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Meter')">
-              <i class="fas fa-tachometer-alt"></i>Meter
+            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Meter')" title="Meter">
+              <i class="fas fa-tachometer-alt"></i>
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','SoftReset')">
-              <i class="fas fa-redo"></i>Reset
+            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','SoftReset')" title="Reset">
+              <i class="fas fa-redo"></i>
             </button>
           </div>
         </td>
@@ -1013,16 +802,12 @@
 
   function pickSerial(sn){
     document.getElementById("serial").value = sn;
-    document.getElementById("serial").focus();
   }
 
   function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   // =========================
@@ -1033,31 +818,20 @@
     const tpl = getTemplate(action);
     document.getElementById("payload").value = JSON.stringify(tpl || {}, null, 2);
     document.getElementById("tplName").textContent = action;
-    showHint("Template aplicado", "success");
   }
 
   function clearPayload(){
     document.getElementById("payload").value = "{}";
-    showHint("Payload limpo", "warning");
   }
 
   function copyPayload(){
     const txt = document.getElementById("payload").value || "";
     navigator.clipboard?.writeText(txt);
-    showHint("Payload copiado!", "success");
   }
 
   function copyResponse(){
     const txt = document.getElementById("resp").textContent || "";
     navigator.clipboard?.writeText(txt);
-    showHint("Resposta copiada!", "success");
-  }
-
-  function showHint(message, type){
-    const hint = document.getElementById("hint");
-    hint.innerHTML = `<i class="fas fa-lightbulb"></i><span>${message}</span>`;
-    hint.className = "badge";
-    hint.classList.add(`badge-${type}`);
   }
 
   async function sendCmd(){
@@ -1065,7 +839,7 @@
     const action = document.getElementById("action").value;
     
     if(!serialNumber){
-      document.getElementById("resp").textContent = "❌ Informe o serialNumber.";
+      document.getElementById("resp").textContent = "❌ Informe o serialNumber";
       return;
     }
     
@@ -1073,7 +847,7 @@
     try{
       payload = JSON.parse(document.getElementById("payload").value || "{}");
     }catch(e){
-      document.getElementById("resp").textContent = `❌ JSON inválido: ${e.message}`;
+      document.getElementById("resp").textContent = `❌ JSON inválido`;
       return;
     }
     
@@ -1085,10 +859,8 @@
       });
       const txt = await r.text();
       document.getElementById("resp").textContent = txt;
-      showHint("Comando enviado!", "success");
     }catch(e){
       document.getElementById("resp").textContent = `❌ Erro: ${e.message}`;
-      showHint("Erro ao enviar comando", "danger");
     }
   }
 
@@ -1128,82 +900,68 @@
   }
   
   function clearLogsBox(){
-    document.getElementById("logsBox").textContent = "Logs limpos\n" + "=".repeat(50) + "\n";
+    document.getElementById("logsBox").textContent = "Logs limpos\n";
     lastRendered = "";
   }
   
   function copyLogs(){
     const txt = document.getElementById("logsBox").textContent || "";
     navigator.clipboard?.writeText(txt);
-    showHint("Logs copiados!", "success");
-  }
-  
-  function exportLogs(){
-    const txt = document.getElementById("logsBox").textContent || "";
-    const blob = new Blob([txt], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ocpp-logs-${new Date().toISOString().slice(0,10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
   
   async function loadLogs(force){
     const t = document.getElementById("logType").value;
-    let j;
     try{
       const r = await fetch(`/api/logs/${t}`);
-      j = await r.json();
-    }catch(e){
-      document.getElementById("logsBox").textContent = "❌ Erro ao carregar logs";
-      return;
-    }
-    
-    if(!j?.ok){
-      document.getElementById("logsBox").textContent = "❌ Resposta inválida do servidor";
-      return;
-    }
-    
-    const box = document.getElementById("logsBox");
-    const current = String(j.log || "").trim();
-    
-    if(!current){
-      box.textContent = "📭 Nenhum log disponível";
-      lastRendered = "";
-      return;
-    }
-    
-    const mode = document.getElementById("logMode").value;
-    
-    if(mode === "full"){
-      if(force || box.textContent !== current){
+      const j = await r.json();
+      
+      if(!j?.ok){
+        document.getElementById("logsBox").textContent = "❌ Erro no servidor";
+        return;
+      }
+      
+      const box = document.getElementById("logsBox");
+      const current = String(j.log || "").trim();
+      
+      if(!current){
+        box.textContent = "📭 Nenhum log";
+        lastRendered = "";
+        return;
+      }
+      
+      const mode = document.getElementById("logMode").value;
+      
+      if(mode === "full"){
+        if(force || box.textContent !== current){
+          box.textContent = current;
+          box.scrollTop = box.scrollHeight;
+        }
+        lastRendered = current;
+        return;
+      }
+      
+      // Mode "new"
+      if(!lastRendered){
         box.textContent = current;
         box.scrollTop = box.scrollHeight;
+        lastRendered = current;
+        return;
       }
-      lastRendered = current;
-      return;
-    }
-    
-    // Mode "new"
-    if(!lastRendered){
-      box.textContent = current;
-      box.scrollTop = box.scrollHeight;
-      lastRendered = current;
-      return;
-    }
-    
-    if(current.includes(lastRendered)){
-      const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
-      if(newPart){
-        box.textContent = box.textContent + "\n" + newPart;
+      
+      if(current.includes(lastRendered)){
+        const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
+        if(newPart){
+          box.textContent = box.textContent + "\n" + newPart;
+          box.scrollTop = box.scrollHeight;
+        }
+        lastRendered = current;
+      }else{
+        box.textContent = current;
         box.scrollTop = box.scrollHeight;
+        lastRendered = current;
       }
-      lastRendered = current;
-    }else{
-      box.textContent = current;
-      box.scrollTop = box.scrollHeight;
-      lastRendered = current;
+    }catch(e){
+      document.getElementById("logsBox").textContent = "❌ Erro de conexão";
     }
   }
 
@@ -1226,20 +984,8 @@
   setPoll();
   setLogPoll();
   
-  // Auto-refresh on focus
+  // Auto-refresh
   window.addEventListener('focus', refreshClients);
-  
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if(e.ctrlKey && e.key === 'r'){
-      e.preventDefault();
-      refreshClients();
-    }
-    if(e.ctrlKey && e.key === 'l'){
-      e.preventDefault();
-      clearLogsBox();
-    }
-  });
 </script>
 </body>
 </html>
