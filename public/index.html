@@ -842,7 +842,7 @@
                 this.messages = [];
                 this.devices = new Set(['2222233333']);
                 this.isPaused = false;
-                this.autoScroll = true; // Controle de scroll automático
+                this.autoScroll = false; // Controle de scroll automático
                 this.currentFilters = {
                     type: 'all',
                     serial: 'all',
@@ -912,14 +912,7 @@
     }
 }
 
-        scrollToBottom() {
-    if (this.autoScroll) {
-        const container = document.getElementById('messagesList');
-        setTimeout(() => {
-            container.scrollTop = container.scrollHeight;
-        }, 10);
-    }
-}
+
 
             startPolling() {
                 setInterval(() => {
