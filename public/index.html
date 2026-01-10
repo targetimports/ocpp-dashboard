@@ -169,6 +169,9 @@
         <span class="badge">Online: <strong id="onlineCount">0</strong></span>
       </div>
       <div class="right">
+<button class="ghost" onclick="downloadLogsRaw()">Baixar bruto</button>
+
+        
         <label class="badge">
           Poll (s)
           <select id="pollSec" onchange="setPoll()" style="padding:6px 8px">
@@ -769,6 +772,34 @@ async function loadLogs(force){
   applyTemplate();
   setPoll();
   setLogPoll();
+
+
+  async function downloadLogsRaw(){
+  const type = document.getElementById("logType").value;
+
+  try{
+    const r = await fetch(`/api/logs/${type}`);
+    const j = await r.json();
+    if(!j?.ok) throw new Error("Falha ao buscar log");
+
+    const text = String(j.log || "");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    const filename = `log-${type}-${ts}.log`;
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }catch(e){
+    alert("Erro ao baixar log: " + (e?.message || e));
+  }
+}
+
 </script>
 </body>
 </html>
