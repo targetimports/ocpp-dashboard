@@ -277,6 +277,26 @@
               <option value="10">10</option>
             </select>
           </label>
+          
+          <label class="badge">
+            Direção
+            <select id="dirFilter" onchange="applyLogFilters()" style="padding:6px 8px">
+              <option value="all" selected>Todos</option>
+              <option value="in">IN</option>
+              <option value="out">OUT</option>
+            </select>
+          </label>
+          <label class="badge">
+            Evento
+            <select id="eventFilter" onchange="applyLogFilters()" style="padding:6px 8px; max-width:210px">
+              <option value="all" selected>Todos</option>
+            </select>
+          </label>
+          <label class="badge">
+            Caminho
+            <input id="pathFilter" oninput="applyLogFilters()" placeholder='ex: /2222' style="padding:6px 10px; width:160px"/>
+          </label>
+
           <button class="ghost" onclick="clearLogsBox()">Limpar tela</button>
         </div>
       </div>
@@ -585,6 +605,28 @@
     }
   }
 
+  function extractPath(line){
+    // captura path="/xxxx" ou path=/xxxx
+    const m1 = String(line).match(/\bpath="?([^"\s]+)"?/);
+    if(m1) return m1[1];
+    // captura URL ws://.../xxxx
+    const m2 = String(line).match(/\b(wss?:\/\/[^\s]+)\b/);
+    if(m2){
+      try{
+        const u = new URL(m2[1]);
+        return u.pathname || "";
+      }catch{}
+    }
+    return "";
+  }
+
+  function directionFromTag(tag){
+    const t = String(tag||"").toUpperCase();
+    if(t.includes("OCPP IN")) return "in";
+    if(t.includes("OCPP OUT")) return "out";
+    return "other";
+  }
+
   function parseLogLinesToEntries(text){
     const lines = String(text || "").split("\n").filter(l => l.trim().length);
     return lines.map(line => {
@@ -599,15 +641,80 @@
 
       const json = tryParseJsonFromLine(line);
       const time = extractIsoTime(line);
+      const path = extractPath(line);
+      const dir = directionFromTag(tag);
 
-      return { raw: line, tag, serial, action, json, time };
+      return { raw: line, tag, serial, action, json, time, path, dir };
     });
   }
 
   let lastFullRender = "";
+  // =========================
+  // Filtros de LOGS (caminho / evento / direção IN/OUT)
+  // =========================
+  let logEntriesCache = [];     // últimas entradas parseadas (do buffer atual)
+  let logFilters = { dir:"all", event:"all", path:"" };
+
+  function ensureEventOptions(){
+    const sel = document.getElementById("eventFilter");
+    if(!sel) return;
+
+    // mantém seleção atual
+    const current = sel.value || "all";
+
+    // extrai eventos únicos (action + tags relevantes)
+    const set = new Set();
+    for(const e of logEntriesCache){
+      if(e.action) set.add(e.action);
+      // se quiser filtrar também por tags (WS, ERROR), descomente:
+      // if(e.tag) set.add(e.tag);
+    }
+
+    const events = Array.from(set).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = '<option value="all">Todos</option>' + events.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+
+    // restaura se possível
+    sel.value = events.includes(current) ? current : "all";
+  }
+
+  function readFiltersFromUI(){
+    const dir = document.getElementById("dirFilter")?.value || "all";
+    const event = document.getElementById("eventFilter")?.value || "all";
+    const path = (document.getElementById("pathFilter")?.value || "").trim();
+    logFilters = { dir, event, path };
+  }
+
+  function applyLogFilters(){
+    readFiltersFromUI();
+    renderLogEntries(logBuffer, document.getElementById("logMode").value);
+  }
+
   function renderLogEntries(text, mode){
     const box = document.getElementById("logsBox");
-    const entries = parseLogLinesToEntries(text);
+    const allEntries = parseLogLinesToEntries(text);
+
+    // cache para os filtros
+    logEntriesCache = allEntries;
+    ensureEventOptions();
+    readFiltersFromUI();
+
+    const entries = allEntries.filter(e => {
+      // direção
+      if(logFilters.dir === "in" && e.dir !== "in") return false;
+      if(logFilters.dir === "out" && e.dir !== "out") return false;
+
+      // evento (action)
+      if(logFilters.event && logFilters.event !== "all"){
+        if(String(e.action || "") !== String(logFilters.event)) return false;
+      }
+
+      // caminho (substring, case-sensitive por padrão)
+      if(logFilters.path){
+        if(!String(e.path || "").includes(logFilters.path)) return false;
+      }
+
+      return true;
+    });
 
     if(mode === "full"){
       if(text === lastFullRender) return;
