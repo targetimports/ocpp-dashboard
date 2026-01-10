@@ -94,8 +94,6 @@
       font-size:11px;color:var(--muted)
     }
     .badge strong{color:var(--txt);font-weight:650}
-    .kv{display:flex;gap:10px;flex-wrap:wrap}
-    .kv .badge{background:rgba(255,255,255,.02)}
     .small{font-size:11px}
 
     /* ============ LOG FORMATADO (cards) ============ */
@@ -169,9 +167,8 @@
         <span class="badge">Online: <strong id="onlineCount">0</strong></span>
       </div>
       <div class="right">
-<button class="ghost" onclick="downloadLogsRaw()">Baixar bruto</button>
+        <button class="ghost" onclick="downloadLogsRaw()">Baixar bruto</button>
 
-        
         <label class="badge">
           Poll (s)
           <select id="pollSec" onchange="setPoll()" style="padding:6px 8px">
@@ -252,7 +249,7 @@
 
       <div class="toolbar">
         <div class="left">
-          <select id="logType">
+          <select id="logType" onchange="resetLogState()">
             <option value="gateway">Gateway OCPP</option>
             <option value="gateway_err">Gateway Erros</option>
             <option value="dashboard">Dashboard</option>
@@ -286,10 +283,9 @@
 
       <div class="muted" style="margin-bottom:10px">
         <span class="badge">💡 Dica</span>
-        Se o server retorna “tail”, o início muda. No modo <b>Completo</b> o painel sempre renderiza o retorno inteiro (não corta).
+        No modo <b>Completo</b> o painel sempre renderiza o retorno inteiro do endpoint (tail). No modo <b>Somente novos</b>, ele acumula e deduplica por linha.
       </div>
 
-      <!-- era <pre> ... agora é div para render HTML -->
       <div id="logsBox" class="mono" style="height:440px"></div>
     </div>
 
@@ -297,45 +293,40 @@
 </div>
 
 <script>
-  // =========================
-  // Templates OCPP 1.6J (CS -> CP)
-  // =========================
+  window.addEventListener("error", (ev) => {
+    console.error("[DASHBOARD ERROR]", ev?.message, ev?.error);
+  });
+
   const COMMANDS = [
-    // Core
     { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
     { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
     { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
-    { group:"Core", action:"Reset", tpl:{ type:"Soft" } }, // Soft | Hard
-    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } }, // Operative | Inoperative
+    { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
+    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
     { group:"Core", action:"ClearCache", tpl:{} },
-    { group:"Core", action:"GetConfiguration", tpl:{ key:[] } }, // [] => tudo
+    { group:"Core", action:"GetConfiguration", tpl:{ key:[] } },
     { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
     { group:"Core", action:"DataTransfer", tpl:{ vendorId:"SeuVendor", messageId:"ping", data:"hello" } },
 
-    // Firmware Management
     { group:"Firmware", action:"GetDiagnostics", tpl:{ location:"https://ocpptarget.cloud/diag", retries:1, retryInterval:60 } },
     { group:"Firmware", action:"UpdateFirmware", tpl:{ location:"https://ocpptarget.cloud/fw.bin", retries:1, retryInterval:60, retrieveDate:new Date(Date.now()+5*60*1000).toISOString() } },
 
-    // Remote Trigger
     { group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
 
-    // Reservation
     { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
     { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
 
-    // Local Auth List Management
     { group:"LocalAuth", action:"GetLocalListVersion", tpl:{} },
     { group:"LocalAuth", action:"SendLocalList", tpl:{
       listVersion: 1,
-      updateType: "Full", // Full | Differential
+      updateType: "Full",
       localAuthorizationList: [
         { idTag: "TARGET001", idTagInfo: { status: "Accepted" } }
       ]
     } },
 
-    // Smart Charging
     { group:"SmartCharging", action:"ClearChargingProfile", tpl:{ id: null, connectorId: 0, chargingProfilePurpose: "TxProfile", stackLevel: 0 } },
-    { group:"SmartCharging", action:"GetCompositeSchedule", tpl:{ connectorId:1, duration:3600, chargingRateUnit:"A" } }, // "A" or "W"
+    { group:"SmartCharging", action:"GetCompositeSchedule", tpl:{ connectorId:1, duration:3600, chargingRateUnit:"A" } },
     { group:"SmartCharging", action:"SetChargingProfile", tpl:{
       connectorId: 1,
       csChargingProfiles: {
@@ -378,9 +369,6 @@
     return found ? found.tpl : {};
   }
 
-  // =========================
-  // Status
-  // =========================
   function setPill(state){
     const pill = document.getElementById("statusPill");
     const text = document.getElementById("statusText");
@@ -391,7 +379,7 @@
 
   async function loadConfig(){
     try{
-      const r = await fetch("/api/config");
+      const r = await fetch("/api/config", { cache:"no-store" });
       const j = await r.json();
       document.getElementById("gw").textContent = j.gatewayUrl || "(indefinido)";
     }catch(e){
@@ -399,13 +387,10 @@
     }
   }
 
-  // =========================
-  // Clients
-  // =========================
   let clientsRaw = [];
   async function refreshClients(){
     try{
-      const r = await fetch("/api/clients");
+      const r = await fetch("/api/clients", { cache:"no-store" });
       const j = await r.json();
       const list = Array.isArray(j) ? j : (j.clients || []);
       clientsRaw = list;
@@ -468,9 +453,6 @@
       .replaceAll("'","&#039;");
   }
 
-  // =========================
-  // Command send
-  // =========================
   function applyTemplate(){
     const action = document.getElementById("action").value;
     const tpl = getTemplate(action);
@@ -537,9 +519,6 @@
     await sendCmd();
   }
 
-  // =========================
-  // Log parsing/formatting
-  // =========================
   function colorByType(tag){
     const t = (tag || "").toUpperCase();
     if (t.includes("OCPP IN")) return "var(--pri)";
@@ -596,6 +575,16 @@
     };
   }
 
+  function extractIsoTime(line){
+    const m = String(line).match(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\b/);
+    if(!m) return "";
+    try{
+      return new Date(m[0]).toLocaleTimeString();
+    }catch{
+      return "";
+    }
+  }
+
   function parseLogLinesToEntries(text){
     const lines = String(text || "").split("\n").filter(l => l.trim().length);
     return lines.map(line => {
@@ -609,24 +598,32 @@
       const action = actionMatch ? actionMatch[1] : "";
 
       const json = tryParseJsonFromLine(line);
+      const time = extractIsoTime(line);
 
-      return { raw: line, tag, serial, action, json };
+      return { raw: line, tag, serial, action, json, time };
     });
   }
 
-  function renderLogEntries(text){
+  let lastFullRender = "";
+  function renderLogEntries(text, mode){
     const box = document.getElementById("logsBox");
     const entries = parseLogLinesToEntries(text);
+
+    if(mode === "full"){
+      if(text === lastFullRender) return;
+      lastFullRender = text;
+    }
 
     let html = `<div class="logWrap">`;
 
     for (const e of entries){
       const c = colorByType(e.tag);
 
-      // conteúdo principal sem JSON duplicado
       let main = e.raw;
       const jsonMatch = main.match(/\{[\s\S]*\}$/);
       if (jsonMatch) main = main.slice(0, jsonMatch.index).trim();
+
+      const timeLabel = e.time ? e.time : "";
 
       html += `<div class="logEntry">
         <div class="logTop">
@@ -638,7 +635,7 @@
             ${e.serial ? `<span class="logSerial">${safeHtml(e.serial)}</span>` : ``}
             ${e.action ? `<span class="logAction">• ${safeHtml(e.action)}</span>` : ``}
           </div>
-          <div class="muted small">${new Date().toLocaleTimeString()}</div>
+          <div class="muted small">${safeHtml(timeLabel)}</div>
         </div>
 
         <div class="logMsg">${safeHtml(main)}</div>
@@ -663,102 +660,92 @@
     html += `</div>`;
     box.innerHTML = html || "";
   }
+
+  let logTimer = null;
+  let logBuffer = "";
+  let seenLines = new Set();
+  const SEEN_MAX = 4000;
+
+  function resetLogState(){
+    logBuffer = "";
+    seenLines = new Set();
+    lastFullRender = "";
+    renderLogEntries("", document.getElementById("logMode").value);
+    loadLogs(true);
+  }
+
+  function clearLogsBox(){
+    logBuffer = "";
+    seenLines = new Set();
+    lastFullRender = "";
+    document.getElementById("logsBox").innerHTML = "";
+  }
+
+  function trimSeen(){
+    if (seenLines.size <= SEEN_MAX) return;
+    const arr = Array.from(seenLines);
+    const cut = arr.length - SEEN_MAX;
+    for (let i = 0; i < cut; i++) seenLines.delete(arr[i]);
+  }
+
+  async function loadLogs(force){
+    const t = document.getElementById("logType").value;
+    let j;
+
+    try{
+      const r = await fetch(`/api/logs/${t}`, { cache:"no-store" });
+      j = await r.json();
+    }catch(e){
+      return;
+    }
+    if (!j?.ok) return;
+
+    const current = String(j.log || "");
+    const mode = document.getElementById("logMode").value;
+
+    const lines = current.split("\n").map(s => s.replace(/\r$/, "")).filter(l => l.trim().length);
+
+    if (mode === "full"){
+      if (force){
+        seenLines = new Set(lines);
+        trimSeen();
+      } else {
+        for (const ln of lines) seenLines.add(ln);
+        trimSeen();
+      }
+      logBuffer = lines.join("\n");
+      renderLogEntries(logBuffer, "full");
+      return;
+    }
+
+    let newLines = [];
+    for (const ln of lines){
+      if (!seenLines.has(ln)){
+        newLines.push(ln);
+        seenLines.add(ln);
+      }
+    }
+    trimSeen();
+
+    if (force && !logBuffer){
+      logBuffer = lines.join("\n");
+      renderLogEntries(logBuffer, "new");
+      return;
+    }
+
+    if (newLines.length){
+      logBuffer = (newLines.join("\n") + "\n" + logBuffer).trim();
+      renderLogEntries(logBuffer, "new");
+    }
+  }
+
   function setLogPoll(){
     if (logTimer) clearInterval(logTimer);
     const sec = Number(document.getElementById("logPollSec").value || "2");
     loadLogs(false);
     logTimer = setInterval(() => loadLogs(false), sec * 1000);
   }
-  // =========================
-  // Logs (sem cortar início no front) + modo "novos" com buffer
-  // =========================
- 
-let logTimer = null;
-let logBuffer = "";                 // o que aparece no painel (acumulado)
-let seenLines = new Set();          // dedupe por linha
-const SEEN_MAX = 4000;              // limite pra não crescer infinito
-function resetLogState(){
-  logBuffer = "";
-  seenLines = new Set();
-  renderLogEntries(logBuffer);
-  loadLogs(true);
-}
 
-function clearLogsBox(){
-  logBuffer = "";
-  seenLines = new Set();
-  document.getElementById("logsBox").innerHTML = "";
-}
-
-function trimSeen(){
-  // mantém o Set "curto" (remove as mais antigas)
-  if (seenLines.size <= SEEN_MAX) return;
-  const arr = Array.from(seenLines);
-  const cut = arr.length - SEEN_MAX;
-  for (let i = 0; i < cut; i++) seenLines.delete(arr[i]);
-}
-
-async function loadLogs(force){
-  const t = document.getElementById("logType").value;
-  let j;
-
-  try{
-    const r = await fetch(`/api/logs/${t}`);
-    j = await r.json();
-  }catch(e){
-    return;
-  }
-  if (!j?.ok) return;
-
-  const current = String(j.log || "");
-  const mode = document.getElementById("logMode").value;
-
-  // linhas atuais do tail
-  const lines = current.split("\n").map(s => s.replace(/\r$/, "")).filter(l => l.trim().length);
-
-  if (mode === "full"){
-    // FULL = mostra exatamente o tail atual (sem acumular) + reinicia dedupe
-    if (force){
-      seenLines = new Set(lines);
-      trimSeen();
-    } else {
-      // atualiza "seen" pra evitar duplicar se trocar pra "new" depois
-      for (const ln of lines) seenLines.add(ln);
-      trimSeen();
-    }
-
-    logBuffer = lines.join("\n");
-    renderLogEntries(logBuffer);
-    return;
-  }
-
-  // NEW = adiciona SOMENTE linhas novas (dedupe)
-  let newLines = [];
-  for (const ln of lines){
-    if (!seenLines.has(ln)){
-      newLines.push(ln);
-      seenLines.add(ln);
-    }
-  }
-  trimSeen();
-
-  if (force && !logBuffer){
-    // primeira carga no modo new
-    logBuffer = lines.join("\n");
-    renderLogEntries(logBuffer);
-    return;
-  }
-
-  if (newLines.length){
-    // ✅ mais novas em cima
-    logBuffer = (newLines.join("\n") + "\n" + logBuffer).trim();
-    renderLogEntries(logBuffer);
-  }
-}
-
-  // =========================
-  // Poll / init
-  // =========================
   let pollTimer = null;
   function setPoll(){
     if (pollTimer) clearInterval(pollTimer);
@@ -767,39 +754,41 @@ async function loadLogs(force){
     pollTimer = setInterval(refreshClients, sec * 1000);
   }
 
+  async function downloadLogsRaw(){
+    const type = document.getElementById("logType").value;
+
+    try{
+      const r = await fetch(`/api/logs/${type}`, { cache:"no-store" });
+      const j = await r.json();
+      if(!j?.ok) throw new Error("Falha ao buscar log");
+
+      const text = String(j.log || "");
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+
+      const ts = new Date().toISOString().replace(/[:.]/g,"-");
+      const filename = `log-${type}-${ts}.log`;
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(a.href);
+    }catch(e){
+      alert("Erro ao baixar log: " + (e?.message || e));
+    }
+  }
+
+  // init
   fillActions();
   loadConfig();
   applyTemplate();
   setPoll();
   setLogPoll();
-
-
-  async function downloadLogsRaw(){
-  const type = document.getElementById("logType").value;
-
-  try{
-    const r = await fetch(`/api/logs/${type}`);
-    const j = await r.json();
-    if(!j?.ok) throw new Error("Falha ao buscar log");
-
-    const text = String(j.log || "");
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-
-    const ts = new Date().toISOString().replace(/[:.]/g,"-");
-    const filename = `log-${type}-${ts}.log`;
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  }catch(e){
-    alert("Erro ao baixar log: " + (e?.message || e));
-  }
-}
-
+  loadLogs(true);
 </script>
 </body>
 </html>
