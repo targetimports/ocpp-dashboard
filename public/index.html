@@ -531,7 +531,6 @@
       // ✅ sempre renderiza o retorno completo (não corta início)
       if (force || box.textContent !== current){
         box.textContent = current;
-        box.scrollTop = 0; // topo
       }
       lastRendered = current;
       return;
@@ -542,7 +541,6 @@
     // estratégia: se o retorno atual NÃO contém o lastRendered, resetamos e mostramos tudo como novo
     if (!lastRendered){
       box.textContent = current;
-      box.scrollTop = 0;
       lastRendered = current;
       return;
     }
@@ -551,13 +549,12 @@
       const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
       if (newPart){
         box.textContent = (newPart + "\n\n" + box.textContent).trim();
-        box.scrollTop = 0;
+        
       }
       lastRendered = current;
     }else{
       // tail “andou” e o início mudou: evita bug de corte
       box.textContent = current + "\n\n" + box.textContent;
-      box.scrollTop = 0;
       lastRendered = current;
     }
   }
