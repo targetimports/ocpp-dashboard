@@ -748,31 +748,6 @@ async function loadLogs(force){
   }
 }
 
-
-    // mode === "new"
-    if (!lastRendered){
-      logBuffer = current;
-      renderLogEntries(logBuffer);
-      lastRendered = current;
-      return;
-    }
-
-    if (current.includes(lastRendered)){
-      const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
-      if (newPart){
-        // coloca o novo por CIMA no buffer (mais recente em cima)
-        logBuffer = (newPart + "\n" + logBuffer).trim();
-        renderLogEntries(logBuffer);
-      }
-      lastRendered = current;
-    }else{
-      // tail “andou”: evita bug de corte
-      logBuffer = (current + "\n" + logBuffer).trim();
-      renderLogEntries(logBuffer);
-      lastRendered = current;
-    }
-  }
-
   // =========================
   // Poll / init
   // =========================
