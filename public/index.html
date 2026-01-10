@@ -1,991 +1,995 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>OCPP Dashboard</title>
-  <style>
-    :root {
-      --bg: #0a0a14;
-      --bg-panel: #12121c;
-      --bg-panel2: #181826;
-      --bg-panel3: #1c1c2e;
-      --primary: #7c3aed;
-      --primary-light: rgba(124, 58, 237, 0.15);
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --info: #3b82f6;
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --border: rgba(255, 255, 255, 0.08);
-      --border-light: rgba(255, 255, 255, 0.12);
-      --radius: 8px;
-      --radius-sm: 6px;
-      --radius-lg: 10px;
-      --shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCPP Dashboard - Monitor em Tempo Real</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --ocpp-in: #8b5cf6;
+            --ocpp-out: #06b6d4;
+            --meter: #10b981;
+            --status: #f59e0b;
+            --txn: #3b82f6;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      line-height: 1.4;
-      font-size: 14px;
-      height: 100vh;
-      overflow: hidden;
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
 
-    /* Header Compact */
-    header {
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+        /* Header */
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .header-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      max-width: 100%;
-    }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
 
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 0.125rem;
-    }
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
 
-    .brand h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
+        .logo-badge {
+            background: linear-gradient(135deg, var(--ocpp-in), var(--ocpp-out));
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
 
-    .brand-subtitle {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-    }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
 
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.375rem 0.75rem;
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 0.8125rem;
-      font-weight: 500;
-      min-width: 140px;
-    }
+        /* Main Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: calc(100vh - 70px);
+        }
 
-    .status-pill.ok { border-color: var(--success); color: var(--success); }
-    .status-pill.warn { border-color: var(--warning); color: var(--warning); }
-    .status-pill.bad { border-color: var(--danger); color: var(--danger); }
+        /* Sidebar */
+        .sidebar {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
 
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
+        .stats-grid {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
 
-    .btn-icon {
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        .stat-card {
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
 
-    .btn-icon:hover {
-      background: var(--primary-light);
-      border-color: var(--primary);
-    }
+        .stat-card h3 {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
-    /* Main Container - Altura máxima */
-    .container {
-      height: calc(100vh - 60px);
-      overflow-y: auto;
-      padding: 0.75rem;
-    }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
 
-    /* Stats Row - Linha única */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-    }
+        .serial-list {
+            margin-top: 2rem;
+        }
 
-    @media (max-width: 768px) {
-      .stats-row {
-        grid-template-columns: 1fr;
-      }
-    }
+        .serial-item {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-    .stat-card {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+        .serial-item:hover {
+            border-color: var(--ocpp-in);
+            transform: translateX(4px);
+        }
 
-    .stat-label {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+        .serial-item.active {
+            border-color: var(--ocpp-in);
+            background-color: rgba(139, 92, 246, 0.1);
+        }
 
-    .stat-value {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
+        .serial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
 
-    /* Main Grid Compacto */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr 1.3fr;
-      gap: 0.75rem;
-      height: calc(100vh - 160px);
-      min-height: 500px;
-    }
+        .serial-id {
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
 
-    @media (max-width: 1200px) {
-      .main-grid {
-        grid-template-columns: 1fr 1fr;
-        height: auto;
-      }
-    }
+        .serial-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+        }
 
-    @media (max-width: 768px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-    }
+        .serial-status.offline {
+            background-color: var(--danger);
+        }
 
-    /* Cards Compactos */
-    .card {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.75rem;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+        /* Main Content */
+        .main-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
 
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
 
-    .card-title-icon {
-      width: 24px;
-      height: 24px;
-      background: var(--primary-light);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--primary);
-      font-size: 0.75rem;
-    }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
 
-    /* Conteúdo com scroll interno */
-    .card-content {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
+        .filter-btn:hover {
+            border-color: var(--ocpp-in);
+        }
 
-    /* Toolbar Compact */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      margin-bottom: 0.75rem;
-    }
+        .filter-btn.active {
+            background-color: var(--ocpp-in);
+            border-color: var(--ocpp-in);
+            color: white;
+        }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.25rem 0.5rem;
-      background: var(--bg-panel3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
-    }
+        .filter-select {
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            min-width: 150px;
+        }
 
-    .badge-success {
-      background: rgba(16, 185, 129, 0.1);
-      border-color: rgba(16, 185, 129, 0.3);
-      color: var(--success);
-    }
+        /* Messages Container */
+        .messages-container {
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
 
-    .badge-warning {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.3);
-      color: var(--warning);
-    }
+        .messages-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    /* Tabela Compacta */
-    .table-container {
-      flex: 1;
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
+        .messages-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 400px;
-    }
+        .messages-list {
+            height: calc(100vh - 300px);
+            overflow-y: auto;
+            padding: 1rem;
+        }
 
-    th {
-      background: var(--bg-panel2);
-      color: var(--text-muted);
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      padding: 0.5rem;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
+        /* Message Items */
+        .message-item {
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--border-color);
+            transition: all 0.2s;
+        }
 
-    td {
-      padding: 0.5rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.8125rem;
-    }
+        .message-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
 
-    tr:last-child td {
-      border-bottom: none;
-    }
+        .message-item[data-type="OCPP IN"] {
+            border-left-color: var(--ocpp-in);
+        }
 
-    tr:hover td {
-      background: var(--primary-light);
-    }
+        .message-item[data-type="OCPP OUT"] {
+            border-left-color: var(--ocpp-out);
+        }
 
-    /* Form Elements Compact */
-    .input-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-    }
+        .message-item[data-type="METER"] {
+            border-left-color: var(--meter);
+        }
 
-    input, select {
-      width: 100%;
-      background: var(--bg-panel2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      font-size: 0.8125rem;
-    }
+        .message-item[data-type="STATUS"] {
+            border-left-color: var(--status);
+        }
 
-    textarea {
-      width: 100%;
-      background: var(--bg-panel2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      font-family: 'Consolas', monospace;
-      font-size: 0.75rem;
-      min-height: 120px;
-      resize: vertical;
-      flex: 1;
-    }
+        .message-item[data-type="TXN"] {
+            border-left-color: var(--txn);
+        }
 
-    /* Buttons Compact */
-    .btn {
-      padding: 0.375rem 0.75rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      transition: all 0.2s;
-    }
+        .message-item[data-type="WS"] {
+            border-left-color: var(--info);
+        }
 
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
 
-    .btn-primary:hover {
-      opacity: 0.9;
-    }
+        .message-type {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-    .btn-secondary {
-      background: var(--bg-panel3);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
+        .message-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
-    .btn-secondary:hover {
-      background: var(--bg-panel2);
-      border-color: var(--primary);
-    }
+        .message-badge.ocpp-in {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: var(--ocpp-in);
+        }
 
-    .btn-group {
-      display: flex;
-      gap: 0.25rem;
-      flex-wrap: wrap;
-    }
+        .message-badge.ocpp-out {
+            background-color: rgba(6, 182, 212, 0.2);
+            color: var(--ocpp-out);
+        }
 
-    .btn-sm {
-      padding: 0.25rem 0.5rem;
-      font-size: 0.6875rem;
-    }
+        .message-badge.meter {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--meter);
+        }
 
-    /* Code Blocks Compact */
-    .code-block {
-      background: var(--bg-panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      font-family: 'Consolas', monospace;
-      font-size: 0.75rem;
-      flex: 1;
-      overflow: auto;
-      min-height: 120px;
-    }
+        .message-badge.status {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--status);
+        }
 
-    .code-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
+        .message-badge.txn {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: var(--txn);
+        }
 
-    /* Empty States */
-    .empty-state {
-      text-align: center;
-      padding: 1rem;
-      color: var(--text-muted);
-      font-size: 0.8125rem;
-    }
+        .message-badge.ws {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: var(--info);
+        }
 
-    /* Scrollbar fina */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
+        .message-time {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
 
-    ::-webkit-scrollbar-track {
-      background: var(--bg-panel);
-    }
+        .message-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
 
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
-    }
+        .message-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            font-size: 0.875rem;
+        }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--primary);
-    }
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-    /* Responsive compact */
-    @media (max-width: 1024px) {
-      .container {
-        padding: 0.5rem;
-      }
-      
-      .main-grid {
-        gap: 0.5rem;
-      }
-      
-      .card {
-        padding: 0.5rem;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        .detail-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: 600;
+        }
+
+        /* Meter Details */
+        .meter-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .meter-point {
+            background-color: rgba(16, 185, 129, 0.1);
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .meter-measurand {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .meter-value {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--meter);
+        }
+
+        .meter-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        /* Status Details */
+        .status-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .status-item {
+            background-color: rgba(245, 158, 11, 0.1);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Transaction Details */
+        .txn-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .txn-item {
+            background-color: rgba(59, 130, 246, 0.1);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* Controls */
+        .control-btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            border: none;
+            background-color: var(--ocpp-in);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            opacity: 0.9;
+        }
+
+        .control-btn.secondary {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
 </head>
-
 <body>
-<header>
-  <div class="header-content">
-    <div class="brand">
-      <h1>OCPP Dashboard</h1>
-      <div class="brand-subtitle">Monitoramento • Controle • Logs</div>
-    </div>
-    
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <div id="statusPill" class="status-pill bad">
-        <span class="status-dot"></span>
-        <span id="statusText">Conectando...</span>
-      </div>
-      <button class="btn-icon" onclick="refreshClients()" title="Atualizar">
-        <i class="fas fa-sync-alt fa-xs"></i>
-      </button>
-    </div>
-  </div>
-</header>
+    <header>
+        <div class="logo">
+            <h1>OCPP Dashboard</h1>
+            <div class="logo-badge">OCPP 1.6J</div>
+        </div>
+        <div class="controls">
+            <select id="pollInterval" class="filter-select">
+                <option value="1000">1 segundo</option>
+                <option value="2000" selected>2 segundos</option>
+                <option value="5000">5 segundos</option>
+                <option value="10000">10 segundos</option>
+            </select>
+            <button id="clearBtn" class="control-btn secondary">Limpar</button>
+            <button id="pauseBtn" class="control-btn secondary">Pausar</button>
+        </div>
+    </header>
 
-<div class="container">
-  <!-- Stats Row -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Gateway</div>
-      <div class="stat-value" id="gw">-</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Online</div>
-      <div class="stat-value" id="onlineCount">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Última Atualização</div>
-      <div class="stat-value" id="lastUpdate">-</div>
-    </div>
-  </div>
-
-  <!-- Main Grid -->
-  <div class="main-grid">
-    <!-- Coluna 1: Carregadores -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <div class="card-title-icon">
-            <i class="fas fa-bolt"></i>
-          </div>
-          <span>Carregadores Online</span>
-        </div>
-        <div class="badge badge-success" id="onlineBadge">0</div>
-      </div>
-      
-      <div class="toolbar">
-        <select id="pollSec" onchange="setPoll()" style="flex: 1;">
-          <option value="2">Poll: 2s</option>
-          <option value="3" selected>Poll: 3s</option>
-          <option value="5">Poll: 5s</option>
-          <option value="10">Poll: 10s</option>
-        </select>
-        <div class="badge">
-          <i class="fas fa-search"></i>
-          <input id="search" oninput="renderClients()" placeholder="Buscar serial..." 
-                 style="background: transparent; border: none; color: inherit; width: 100px;">
-        </div>
-      </div>
-      
-      <div class="card-content">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Serial</th>
-                <th style="width: 120px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="clientsBody">
-              <tr>
-                <td colspan="2" class="empty-state">
-                  <i class="fas fa-plug"></i><br>
-                  Carregando...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Coluna 2: Comandos -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <div class="card-title-icon">
-            <i class="fas fa-terminal"></i>
-          </div>
-          <span>Enviar Comando</span>
-        </div>
-        <div class="badge">CS → CP</div>
-      </div>
-      
-      <div class="card-content" style="gap: 0.75rem;">
-        <div class="input-group">
-          <input id="serial" placeholder="Serial Number" />
-          <select id="action" onchange="applyTemplate()"></select>
-        </div>
-        
-        <div class="toolbar" style="margin: 0;">
-          <div class="badge" style="flex: 1;">
-            <i class="fas fa-file-code"></i>
-            <span>Template: </span>
-            <strong id="tplName">—</strong>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="applyTemplate()">
-            <i class="fas fa-magic"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="clearPayload()">
-            <i class="fas fa-eraser"></i>
-          </button>
-        </div>
-        
-        <textarea id="payload" placeholder="Payload JSON...">{}</textarea>
-        
-        <div class="toolbar" style="margin: 0;">
-          <button class="btn btn-primary" onclick="sendCmd()" style="flex: 1;">
-            <i class="fas fa-paper-plane"></i> Enviar
-          </button>
-          <button class="btn btn-secondary" onclick="copyPayload()">
-            <i class="fas fa-copy"></i>
-          </button>
-        </div>
-        
-        <div class="code-block">
-          <div class="code-header">
-            <span>Resposta</span>
-            <button class="btn btn-secondary btn-sm" onclick="copyResponse()">
-              <i class="fas fa-copy fa-xs"></i>
-            </button>
-          </div>
-          <pre id="resp" style="margin: 0; white-space: pre-wrap; word-break: break-all;">{}</pre>
-        </div>
-      </div>
-    </div>
-
-    <!-- Coluna 3: Logs -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <div class="card-title-icon">
-            <i class="fas fa-scroll"></i>
-          </div>
-          <span>Logs do Sistema</span>
-        </div>
-        <div class="badge badge-warning">
-          <i class="fas fa-sync fa-spin"></i>
-        </div>
-      </div>
-      
-      <div class="card-content" style="gap: 0.75rem;">
-        <div class="toolbar">
-          <select id="logType" style="flex: 1;">
-            <option value="gateway">Gateway OCPP</option>
-            <option value="gateway_err">Gateway Erros</option>
-            <option value="dashboard">Dashboard</option>
-            <option value="dashboard_err">Dashboard Erros</option>
-            <option value="nginx">Nginx Error</option>
-            <option value="nginx_access">Nginx Access</option>
-          </select>
-          <button class="btn btn-secondary" onclick="loadLogs(true)">
-            <i class="fas fa-redo"></i>
-          </button>
-        </div>
-        
-        <div class="toolbar" style="margin: 0;">
-          <select id="logMode" onchange="resetLogState()" style="flex: 1;">
-            <option value="full" selected>Modo: Completo</option>
-            <option value="new">Modo: Somente novos</option>
-          </select>
-          <select id="logPollSec" onchange="setLogPoll()" style="flex: 1;">
-            <option value="2">Poll: 2s</option>
-            <option value="5">Poll: 5s</option>
-            <option value="10">Poll: 10s</option>
-          </select>
-          <button class="btn btn-secondary btn-sm" onclick="clearLogsBox()">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-        
-        <div class="code-block" style="flex: 1;">
-          <div class="code-header">
-            <span>Logs em Tempo Real</span>
-            <div class="btn-group">
-              <button class="btn btn-secondary btn-sm" onclick="copyLogs()">
-                <i class="fas fa-copy"></i>
-              </button>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Mensagens</h3>
+                    <div class="stat-value" id="totalMessages">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Dispositivos</h3>
+                    <div class="stat-value" id="totalDevices">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Última Atualização</h3>
+                    <div class="stat-value" id="lastUpdate">-</div>
+                </div>
             </div>
-          </div>
-          <pre id="logsBox" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Aguardando logs...</pre>
-        </div>
-      </div>
+
+            <div class="serial-list">
+                <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Dispositivos Conectados</h3>
+                <div id="serialList">
+                    <!-- Serial items will be added here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="filters">
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Todos</button>
+                    <button class="filter-btn" data-filter="OCPP IN">OCPP IN</button>
+                    <button class="filter-btn" data-filter="OCPP OUT">OCPP OUT</button>
+                    <button class="filter-btn" data-filter="METER">Meter Values</button>
+                    <button class="filter-btn" data-filter="STATUS">Status</button>
+                    <button class="filter-btn" data-filter="TXN">Transactions</button>
+                    <button class="filter-btn" data-filter="WS">WebSocket</button>
+                </div>
+                
+                <select id="serialFilter" class="filter-select">
+                    <option value="all">Todos os Seriais</option>
+                    <!-- Serial options will be added here -->
+                </select>
+                
+                <select id="actionFilter" class="filter-select">
+                    <option value="all">Todas as Ações</option>
+                    <option value="Heartbeat">Heartbeat</option>
+                    <option value="StatusNotification">Status</option>
+                    <option value="MeterValues">Meter Values</option>
+                    <option value="StartTransaction">Start Transaction</option>
+                    <option value="StopTransaction">Stop Transaction</option>
+                    <option value="BootNotification">Boot</option>
+                    <option value="TriggerMessage">Trigger Message</option>
+                    <option value="Reset">Reset</option>
+                    <option value="RemoteStartTransaction">Remote Start</option>
+                    <option value="RemoteStopTransaction">Remote Stop</option>
+                </select>
+            </div>
+
+            <div class="messages-container">
+                <div class="messages-header">
+                    <h2>Mensagens em Tempo Real</h2>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <span id="filteredCount" style="color: var(--text-muted); font-size: 0.875rem;">Mostrando 0 mensagens</span>
+                    </div>
+                </div>
+                <div class="messages-list" id="messagesList">
+                    <!-- Messages will be added here -->
+                </div>
+            </div>
+        </main>
     </div>
-  </div>
-</div>
 
-<script>
-  // =========================
-  // Templates OCPP 1.6J
-  // =========================
-  const COMMANDS = [
-    { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
-    { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
-    { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
-    { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
-    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
-    { group:"Core", action:"ClearCache", tpl:{} },
-    { group:"Core", action:"GetConfiguration", tpl:{ key:[] } },
-    { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
-    { group:"Core", action:"DataTransfer", tpl:{ vendorId:"SeuVendor", messageId:"ping", data:"hello" } },
-    { group:"Firmware", action:"GetDiagnostics", tpl:{ location:"https://ocpptarget.cloud/diag", retries:1, retryInterval:60 } },
-    { group:"Firmware", action:"UpdateFirmware", tpl:{ location:"https://ocpptarget.cloud/fw.bin", retries:1, retryInterval:60, retrieveDate:new Date(Date.now()+5*60*1000).toISOString() } },
-    { group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
-    { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
-    { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
-    { group:"LocalAuth", action:"GetLocalListVersion", tpl:{} },
-    { group:"LocalAuth", action:"SendLocalList", tpl:{ listVersion:1, updateType:"Full", localAuthorizationList:[{ idTag:"TARGET001", idTagInfo:{ status:"Accepted" } }] } },
-    { group:"SmartCharging", action:"ClearChargingProfile", tpl:{ id:null, connectorId:0, chargingProfilePurpose:"TxProfile", stackLevel:0 } },
-    { group:"SmartCharging", action:"GetCompositeSchedule", tpl:{ connectorId:1, duration:3600, chargingRateUnit:"A" } },
-    { group:"SmartCharging", action:"SetChargingProfile", tpl:{ connectorId:1, csChargingProfiles:{ chargingProfileId:1, stackLevel:0, chargingProfilePurpose:"TxProfile", chargingProfileKind:"Absolute", chargingSchedule:{ duration:3600, startSchedule:new Date().toISOString(), chargingRateUnit:"A", chargingSchedulePeriod:[{ startPeriod:0, limit:16, numberPhases:1 }] } } } }
-  ];
+    <script>
+        class OCPPDashboard {
+            constructor() {
+                this.messages = [];
+                this.devices = new Set();
+                this.isPaused = false;
+                this.currentFilters = {
+                    type: 'all',
+                    serial: 'all',
+                    action: 'all'
+                };
+                this.initialize();
+            }
 
-  function fillActions(){
-    const sel = document.getElementById("action");
-    sel.innerHTML = "";
-    COMMANDS.forEach(c => {
-      const op = document.createElement("option");
-      op.value = c.action;
-      op.textContent = c.action;
-      op.title = c.group;
-      sel.appendChild(op);
-    });
-  }
+            initialize() {
+                this.setupEventListeners();
+                this.startPolling();
+                this.updateStats();
+                this.simulateInitialData();
+            }
 
-  function getTemplate(action){
-    const found = COMMANDS.find(c => c.action === action);
-    return found ? found.tpl : {};
-  }
+            setupEventListeners() {
+                // Filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentFilters.type = btn.dataset.filter;
+                        this.filterMessages();
+                    });
+                });
 
-  // =========================
-  // Status & Config
-  // =========================
-  function setPill(state){
-    const pill = document.getElementById("statusPill");
-    const text = document.getElementById("statusText");
-    pill.className = `status-pill ${state}`;
-    text.textContent = state === "ok" ? "Online" : state === "warn" ? "Parcial" : "Offline";
-  }
+                // Serial filter
+                document.getElementById('serialFilter').addEventListener('change', (e) => {
+                    this.currentFilters.serial = e.target.value;
+                    this.filterMessages();
+                });
 
-  async function loadConfig(){
-    try{
-      const r = await fetch("/api/config");
-      const j = await r.json();
-      const url = j.gatewayUrl || "";
-      const display = url.split('//')[1] || url || "Indefinido";
-      document.getElementById("gw").textContent = display.length > 20 ? display.substring(0,20)+"..." : display;
-    }catch(e){
-      document.getElementById("gw").textContent = "Erro";
-    }
-  }
+                // Action filter
+                document.getElementById('actionFilter').addEventListener('change', (e) => {
+                    this.currentFilters.action = e.target.value;
+                    this.filterMessages();
+                });
 
-  // =========================
-  // Clients Management
-  // =========================
-  let clientsRaw = [];
-  
-  async function refreshClients(){
-    try{
-      const r = await fetch("/api/clients");
-      const j = await r.json();
-      const list = Array.isArray(j) ? j : (j.clients || []);
-      clientsRaw = list;
-      setPill("ok");
-      updateLastUpdate();
-      renderClients();
-    }catch(e){
-      clientsRaw = [];
-      setPill("bad");
-      renderClients();
-    }
-  }
+                // Control buttons
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearMessages());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('pollInterval').addEventListener('change', (e) => {
+                    this.updatePollInterval(parseInt(e.target.value));
+                });
+            }
 
-  function updateLastUpdate(){
-    const now = new Date();
-    document.getElementById("lastUpdate").textContent = 
-      `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-  }
+            startPolling() {
+                // In a real implementation, this would connect to WebSocket or poll an API
+                setInterval(() => {
+                    if (!this.isPaused) {
+                        this.fetchNewMessages();
+                    }
+                }, 2000);
+            }
 
-  function normalizeSerial(x){
-    if(typeof x === "string") return x;
-    if(!x || typeof x !== "object") return String(x ?? "");
-    return x.serialNumber || x.chargePointId || x.id || x.sn || "[obj]";
-  }
+            simulateInitialData() {
+                // Add some initial simulated data
+                const initialLogs = `[OCPP IN] 2222233333 CALL action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua payload={}
+[ONLINE] 2222233333 agora ONLINE (Heartbeat)
+[OCPP OUT] 2222233333 CALLRESULT action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua
+[OCPP OUT] 2222233333 CALL TriggerMessage id=051a0d8306f5419ba5dea406 ok=true (via HTTP)
+[OCPP IN] 2222233333 CALL action=StatusNotification id=eYjhfHdiCh+EqpyvAp46 payload={"connectorId":0,"errorCode":"NoError","status":"Available","timestamp":"2026-01-10T03:06:29Z"}
+[OCPP OUT] 2222233333 CALLRESULT action=StatusNotification id=eYjhfHdiCh+EqpyvAp46
+[METER] 2222233333 {"serialNumber":"2222233333","connectorId":1,"transactionId":null,"ts":"2026-01-10T03:30:58.007Z","points":[{"timestamp":"2026-01-10T03:30:57Z","value":"2280","measurand":"Energy.Active.Import.Register","unit":"Wh","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0.00","measurand":"Current.Import","unit":"A","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"255","measurand":"SoC","unit":"Percent","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"37","measurand":"Temperature","unit":"Celsius","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0.00","measurand":"Voltage","unit":"V","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0","measurand":"Power.Active.Import","unit":"W","phase":null,"location":null,"context":"Trigger","format":null}]}`;
 
-  function renderClients(){
-    const body = document.getElementById("clientsBody");
-    const q = (document.getElementById("search").value || "").trim().toLowerCase();
-    
-    const list = clientsRaw.map(normalizeSerial).filter(Boolean);
-    const filtered = q ? list.filter(s => s.toLowerCase().includes(q)) : list;
-    const count = filtered.length;
-    
-    document.getElementById("onlineCount").textContent = count;
-    document.getElementById("onlineBadge").textContent = count;
-    
-    if(!count){
-      body.innerHTML = `
-        <tr>
-          <td colspan="2" class="empty-state">
-            <i class="fas fa-wifi-slash"></i><br>
-            Nenhum online
-          </td>
-        </tr>`;
-      return;
-    }
-    
-    body.innerHTML = filtered.map(sn => `
-      <tr>
-        <td>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div style="width: 6px; height: 6px; background: var(--success); border-radius: 50%;"></div>
-            <strong style="cursor: pointer" onclick="pickSerial('${escapeHtml(sn)}')">${escapeHtml(sn)}</strong>
-          </div>
-        </td>
-        <td>
-          <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Status')" title="Status">
-              <i class="fas fa-chart-bar"></i>
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','Meter')" title="Meter">
-              <i class="fas fa-tachometer-alt"></i>
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="quick('${escapeHtml(sn)}','SoftReset')" title="Reset">
-              <i class="fas fa-redo"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join("");
-  }
+                const lines = initialLogs.split('\n');
+                lines.forEach(line => {
+                    if (line.trim()) {
+                        this.parseAndAddMessage(line);
+                    }
+                });
+            }
 
-  function pickSerial(sn){
-    document.getElementById("serial").value = sn;
-  }
+            async fetchNewMessages() {
+                try {
+                    // In a real implementation, this would fetch from an API
+                    // For now, we'll simulate new messages
+                    this.simulateNewMessage();
+                    this.updateStats();
+                } catch (error) {
+                    console.error('Error fetching messages:', error);
+                }
+            }
 
-  function escapeHtml(str){
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+            simulateNewMessage() {
+                const messageTypes = [
+                    {
+                        type: 'OCPP IN',
+                        content: `[OCPP IN] 2222233333 CALL action=Heartbeat id=${this.generateId()} payload={}`,
+                        action: 'Heartbeat'
+                    },
+                    {
+                        type: 'OCPP OUT',
+                        content: `[OCPP OUT] 2222233333 CALLRESULT action=Heartbeat id=${this.generateId()}`,
+                        action: 'Heartbeat'
+                    },
+                    {
+                        type: 'METER',
+                        content: `[METER] 2222233333 {"serialNumber":"2222233333","connectorId":1,"transactionId":null,"ts":"${new Date().toISOString()}","points":[{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${Math.floor(Math.random() * 3000)}","measurand":"Energy.Active.Import.Register","unit":"Wh","phase":null,"location":null,"context":"Sample.Periodic","format":null},{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${(Math.random() * 32).toFixed(2)}","measurand":"Current.Import","unit":"A","phase":null,"location":null,"context":"Sample.Periodic","format":null},{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${Math.floor(Math.random() * 100)}","measurand":"SoC","unit":"Percent","phase":null,"location":null,"context":"Sample.Periodic","format":null}]}`,
+                        action: 'MeterValues'
+                    }
+                ];
 
-  // =========================
-  // Command Sending
-  // =========================
-  function applyTemplate(){
-    const action = document.getElementById("action").value;
-    const tpl = getTemplate(action);
-    document.getElementById("payload").value = JSON.stringify(tpl || {}, null, 2);
-    document.getElementById("tplName").textContent = action;
-  }
+                const msg = messageTypes[Math.floor(Math.random() * messageTypes.length)];
+                this.parseAndAddMessage(msg.content);
+            }
 
-  function clearPayload(){
-    document.getElementById("payload").value = "{}";
-  }
+            generateId() {
+                return Math.random().toString(36).substr(2, 9);
+            }
 
-  function copyPayload(){
-    const txt = document.getElementById("payload").value || "";
-    navigator.clipboard?.writeText(txt);
-  }
+            parseAndAddMessage(rawMessage) {
+                const message = this.parseMessage(rawMessage);
+                if (message) {
+                    this.messages.unshift(message);
+                    if (message.serial) {
+                        this.devices.add(message.serial);
+                        this.updateDeviceList();
+                    }
+                    this.renderMessages();
+                }
+            }
 
-  function copyResponse(){
-    const txt = document.getElementById("resp").textContent || "";
-    navigator.clipboard?.writeText(txt);
-  }
+            parseMessage(rawMessage) {
+                const timestamp = new Date().toLocaleTimeString();
+                
+                // Try to extract serial number
+                let serial = null;
+                const serialMatch = rawMessage.match(/\[.*?\] (\d+)/);
+                if (serialMatch) {
+                    serial = serialMatch[1];
+                }
 
-  async function sendCmd(){
-    const serialNumber = (document.getElementById("serial").value || "").trim();
-    const action = document.getElementById("action").value;
-    
-    if(!serialNumber){
-      document.getElementById("resp").textContent = "❌ Informe o serialNumber";
-      return;
-    }
-    
-    let payload = {};
-    try{
-      payload = JSON.parse(document.getElementById("payload").value || "{}");
-    }catch(e){
-      document.getElementById("resp").textContent = `❌ JSON inválido`;
-      return;
-    }
-    
-    try{
-      const r = await fetch("/api/send", {
-        method:"POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ serialNumber, action, payload })
-      });
-      const txt = await r.text();
-      document.getElementById("resp").textContent = txt;
-    }catch(e){
-      document.getElementById("resp").textContent = `❌ Erro: ${e.message}`;
-    }
-  }
+                // Determine message type
+                let type = 'OTHER';
+                let action = null;
+                
+                if (rawMessage.includes('[OCPP IN]')) {
+                    type = 'OCPP IN';
+                    const actionMatch = rawMessage.match(/action=(\w+)/);
+                    action = actionMatch ? actionMatch[1] : null;
+                } else if (rawMessage.includes('[OCPP OUT]')) {
+                    type = 'OCPP OUT';
+                    const actionMatch = rawMessage.match(/action=(\w+)/);
+                    action = actionMatch ? actionMatch[1] : null;
+                } else if (rawMessage.includes('[METER]')) {
+                    type = 'METER';
+                    action = 'MeterValues';
+                } else if (rawMessage.includes('[STATUS]') || rawMessage.includes('StatusNotification')) {
+                    type = 'STATUS';
+                    action = 'StatusNotification';
+                } else if (rawMessage.includes('[TXN]') || rawMessage.includes('Transaction')) {
+                    type = 'TXN';
+                    action = rawMessage.includes('StartTransaction') ? 'StartTransaction' : 'StopTransaction';
+                } else if (rawMessage.includes('[WS]')) {
+                    type = 'WS';
+                    action = 'WebSocket';
+                }
 
-  async function quick(sn, type){
-    pickSerial(sn);
-    if(type === "Status"){
-      document.getElementById("action").value = "TriggerMessage";
-      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"StatusNotification", connectorId:1 }, null, 2);
-    }
-    if(type === "Meter"){
-      document.getElementById("action").value = "TriggerMessage";
-      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"MeterValues", connectorId:1 }, null, 2);
-    }
-    if(type === "SoftReset"){
-      document.getElementById("action").value = "Reset";
-      document.getElementById("payload").value = JSON.stringify({ type:"Soft" }, null, 2);
-    }
-    await sendCmd();
-  }
+                // Try to parse JSON if present
+                let jsonData = null;
+                try {
+                    const jsonMatch = rawMessage.match(/\{[\s\S]*\}$/);
+                    if (jsonMatch) {
+                        jsonData = JSON.parse(jsonMatch[0]);
+                    }
+                } catch (e) {
+                    // Not a JSON message
+                }
 
-  // =========================
-  // Logs Management
-  // =========================
-  let logTimer = null;
-  let lastRendered = "";
-  
-  function resetLogState(){
-    lastRendered = "";
-    loadLogs(true);
-  }
-  
-  function setLogPoll(){
-    if(logTimer) clearInterval(logTimer);
-    const sec = Number(document.getElementById("logPollSec").value || "2");
-    loadLogs(false);
-    logTimer = setInterval(() => loadLogs(false), sec * 1000);
-  }
-  
-  function clearLogsBox(){
-    document.getElementById("logsBox").textContent = "Logs limpos\n";
-    lastRendered = "";
-  }
-  
-  function copyLogs(){
-    const txt = document.getElementById("logsBox").textContent || "";
-    navigator.clipboard?.writeText(txt);
-  }
-  
-  async function loadLogs(force){
-    const t = document.getElementById("logType").value;
-    try{
-      const r = await fetch(`/api/logs/${t}`);
-      const j = await r.json();
-      
-      if(!j?.ok){
-        document.getElementById("logsBox").textContent = "❌ Erro no servidor";
-        return;
-      }
-      
-      const box = document.getElementById("logsBox");
-      const current = String(j.log || "").trim();
-      
-      if(!current){
-        box.textContent = "📭 Nenhum log";
-        lastRendered = "";
-        return;
-      }
-      
-      const mode = document.getElementById("logMode").value;
-      
-      if(mode === "full"){
-        if(force || box.textContent !== current){
-          box.textContent = current;
-          box.scrollTop = box.scrollHeight;
+                return {
+                    id: Date.now() + Math.random(),
+                    raw: rawMessage,
+                    type,
+                    action,
+                    serial,
+                    timestamp,
+                    jsonData,
+                    parsed: this.parseMessageDetails(rawMessage, type, jsonData)
+                };
+            }
+
+            parseMessageDetails(raw, type, jsonData) {
+                const details = {};
+                
+                switch(type) {
+                    case 'METER':
+                        if (jsonData) {
+                            details.connectorId = jsonData.connectorId;
+                            details.transactionId = jsonData.transactionId;
+                            details.timestamp = jsonData.ts;
+                            details.points = jsonData.points || [];
+                        }
+                        break;
+                        
+                    case 'OCPP IN':
+                    case 'OCPP OUT':
+                        // Extract action and ID
+                        const actionMatch = raw.match(/action=(\w+)/);
+                        const idMatch = raw.match(/id=([^\s]+)/);
+                        const forMatch = raw.match(/for=(\w+)/);
+                        
+                        if (actionMatch) details.action = actionMatch[1];
+                        if (idMatch) details.messageId = idMatch[1];
+                        if (forMatch) details.forAction = forMatch[1];
+                        break;
+                }
+                
+                return details;
+            }
+
+            renderMessages() {
+                const container = document.getElementById('messagesList');
+                const filtered = this.getFilteredMessages();
+                
+                container.innerHTML = '';
+                
+                filtered.forEach(msg => {
+                    const element = this.createMessageElement(msg);
+                    container.appendChild(element);
+                });
+                
+                this.updateFilteredCount(filtered.length);
+            }
+
+            createMessageElement(msg) {
+                const div = document.createElement('div');
+                div.className = 'message-item';
+                div.dataset.type = msg.type;
+                
+                // Format content for display
+                let formattedContent = msg.raw;
+                try {
+                    // Try to format JSON nicely
+                    const jsonMatch = msg.raw.match(/\{[\s\S]*\}$/);
+                    if (jsonMatch) {
+                        const jsonStr = jsonMatch[0];
+                        const parsed = JSON.parse(jsonStr);
+                        formattedContent = msg.raw.replace(jsonStr, JSON.stringify(parsed, null, 2));
+                    }
+                } catch (e) {
+                    // Keep original if can't parse
+                }
+                
+                // Get badge class
+                let badgeClass = '';
+                switch(msg.type) {
+                    case 'OCPP IN': badgeClass = 'ocpp-in'; break;
+                    case 'OCPP OUT': badgeClass = 'ocpp-out'; break;
+                    case 'METER': badgeClass = 'meter'; break;
+                    case 'STATUS': badgeClass = 'status'; break;
+                    case 'TXN': badgeClass = 'txn'; break;
+                    case 'WS': badgeClass = 'ws'; break;
+                }
+                
+                let html = `
+                    <div class="message-header">
+                        <div class="message-type">
+                            <span class="message-badge ${badgeClass}">${msg.type}</span>
+                            ${msg.serial ? `<span class="detail-value">${msg.serial}</span>` : ''}
+                            ${msg.action ? `<span style="color: var(--text-muted);">• ${msg.action}</span>` : ''}
+                        </div>
+                        <div class="message-time">${msg.timestamp}</div>
+                    </div>
+                    <div class="message-content">${this.escapeHtml(formattedContent)}</div>
+                `;
+                
+                // Add details based on message type
+                if (msg.type === 'METER' && msg.jsonData && msg.jsonData.points) {
+                    html += this.createMeterDetails(msg.jsonData.points);
+                }
+                
+                div.innerHTML = html;
+                return div;
+            }
+
+            createMeterDetails(points) {
+                const importantPoints = points.filter(p => 
+                    ['Energy.Active.Import.Register', 'Power.Active.Import', 'SoC', 
+                     'Current.Import', 'Voltage', 'Temperature'].includes(p.measurand)
+                );
+                
+                if (importantPoints.length === 0) return '';
+                
+                let html = '<div class="meter-details">';
+                importantPoints.forEach(point => {
+                    const label = this.getMeasurandLabel(point.measurand);
+                    html += `
+                        <div class="meter-point">
+                            <div class="meter-measurand">${label}</div>
+                            <div class="meter-value">
+                                ${point.value}
+                                <span class="meter-unit">${point.unit}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                return html;
+            }
+
+            getMeasurandLabel(measurand) {
+                const labels = {
+                    'Energy.Active.Import.Register': 'Energia Total',
+                    'Power.Active.Import': 'Potência',
+                    'SoC': 'Estado de Carga',
+                    'Current.Import': 'Corrente',
+                    'Voltage': 'Tensão',
+                    'Temperature': 'Temperatura'
+                };
+                return labels[measurand] || measurand;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            getFilteredMessages() {
+                return this.messages.filter(msg => {
+                    // Type filter
+                    if (this.currentFilters.type !== 'all' && msg.type !== this.currentFilters.type) {
+                        return false;
+                    }
+                    
+                    // Serial filter
+                    if (this.currentFilters.serial !== 'all' && msg.serial !== this.currentFilters.serial) {
+                        return false;
+                    }
+                    
+                    // Action filter
+                    if (this.currentFilters.action !== 'all' && msg.action !== this.currentFilters.action) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+
+            updateStats() {
+                document.getElementById('totalMessages').textContent = this.messages.length;
+                document.getElementById('totalDevices').textContent = this.devices.size;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            }
+
+            updateFilteredCount(count) {
+                document.getElementById('filteredCount').textContent = `Mostrando ${count} mensagens`;
+            }
+
+            updateDeviceList() {
+                const container = document.getElementById('serialList');
+                const filter = document.getElementById('serialFilter');
+                
+                // Clear existing options except "all"
+                container.innerHTML = '';
+                const filterOptions = Array.from(filter.querySelectorAll('option')).slice(1);
+                filterOptions.forEach(opt => opt.remove());
+                
+                // Add devices
+                this.devices.forEach(serial => {
+                    // Add to sidebar list
+                    const item = document.createElement('div');
+                    item.className = 'serial-item';
+                    item.innerHTML = `
+                        <div class="serial-header">
+                            <div class="serial-id">${serial}</div>
+                            <div class="serial-status"></div>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.875rem;">
+                            Última mensagem: ${new Date().toLocaleTimeString()}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                    
+                    // Add to filter dropdown
+                    const option = document.createElement('option');
+                    option.value = serial;
+                    option.textContent = serial;
+                    filter.appendChild(option);
+                });
+            }
+
+            clearMessages() {
+                this.messages = [];
+                this.devices.clear();
+                this.updateDeviceList();
+                this.renderMessages();
+                this.updateStats();
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                const btn = document.getElementById('pauseBtn');
+                btn.textContent = this.isPaused ? 'Continuar' : 'Pausar';
+            }
+
+            updatePollInterval(interval) {
+                // In a real implementation, this would update the polling interval
+                console.log('Polling interval updated to:', interval);
+            }
         }
-        lastRendered = current;
-        return;
-      }
-      
-      // Mode "new"
-      if(!lastRendered){
-        box.textContent = current;
-        box.scrollTop = box.scrollHeight;
-        lastRendered = current;
-        return;
-      }
-      
-      if(current.includes(lastRendered)){
-        const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
-        if(newPart){
-          box.textContent = box.textContent + "\n" + newPart;
-          box.scrollTop = box.scrollHeight;
-        }
-        lastRendered = current;
-      }else{
-        box.textContent = current;
-        box.scrollTop = box.scrollHeight;
-        lastRendered = current;
-      }
-    }catch(e){
-      document.getElementById("logsBox").textContent = "❌ Erro de conexão";
-    }
-  }
 
-  // =========================
-  // Poll & Initialization
-  // =========================
-  let pollTimer = null;
-  
-  function setPoll(){
-    if(pollTimer) clearInterval(pollTimer);
-    const sec = Number(document.getElementById("pollSec").value || "3");
-    refreshClients();
-    pollTimer = setInterval(refreshClients, sec * 1000);
-  }
-  
-  // Initialize
-  fillActions();
-  loadConfig();
-  applyTemplate();
-  setPoll();
-  setLogPoll();
-  
-  // Auto-refresh
-  window.addEventListener('focus', refreshClients);
-</script>
+        // Initialize the dashboard when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new OCPPDashboard();
+        });
+    </script>
 </body>
 </html>
