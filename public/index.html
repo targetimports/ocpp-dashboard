@@ -5,230 +5,450 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>OCPP Dashboard</title>
   <style>
-    #logsBox {
-  white-space: pre-wrap;
-  background: #0b0f14;
-  border: 1px solid #1f2a37;
-  border-radius: 12px;
-  padding: 12px;
-  height: 320px;
-  overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
-}
-
-    
-    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#0b0f14;color:#e6edf3}
-    header{padding:16px 20px;border-bottom:1px solid #1f2a37;display:flex;gap:12px;align-items:center;justify-content:space-between}
-    .wrap{padding:18px 20px;max-width:1100px;margin:auto}
-    .card{background:#0f1620;border:1px solid #1f2a37;border-radius:12px;padding:14px;margin:12px 0}
+    :root{
+      --bg:#0b0f14; --panel:#0f1620; --panel2:#0c121a;
+      --line:#1f2a37; --line2:#2b3a4c;
+      --txt:#e6edf3; --muted:#9aa4b2;
+      --ok:#22c55e; --bad:#ef4444; --pri:#8b5cf6; --warn:#f59e0b;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Arial}
+    header{
+      position:sticky;top:0;z-index:5;
+      padding:14px 18px;border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(11,15,20,0.98), rgba(11,15,20,0.92));
+      backdrop-filter: blur(6px);
+      display:flex;align-items:center;justify-content:space-between;gap:12px
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand b{font-size:18px}
+    .brand span{color:var(--muted);font-size:12px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    input,select,button,textarea{background:#0b0f14;color:#e6edf3;border:1px solid #2b3a4c;border-radius:10px;padding:10px}
+    .wrap{padding:16px 18px;max-width:1300px;margin:auto}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr 1.25fr 1.6fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    }
+    .card h3{margin:0 0 10px 0;font-size:14px;letter-spacing:.2px}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{
+      padding:5px 10px;border-radius:999px;border:1px solid var(--line2);
+      font-size:12px;display:inline-flex;gap:8px;align-items:center
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}
+    .ok .dot{background:var(--ok)}
+    .bad .dot{background:var(--bad)}
+    .warn .dot{background:var(--warn)}
+    input,select,button,textarea{
+      background:var(--panel2);
+      color:var(--txt);
+      border:1px solid var(--line2);
+      border-radius:12px;
+      padding:10px 10px;
+      outline:none;
+    }
     button{cursor:pointer}
-    button:hover{border-color:#8b5cf6}
-    .pill{padding:4px 10px;border-radius:999px;border:1px solid #2b3a4c;font-size:12px}
-    .ok{border-color:#22c55e;color:#22c55e}
-    .bad{border-color:#ef4444;color:#ef4444}
+    button:hover{border-color:var(--pri)}
+    button.primary{border-color:rgba(139,92,246,.65)}
+    button.primary:hover{border-color:var(--pri)}
+    button.ghost{background:transparent}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:520px){ .split{grid-template-columns:1fr} }
+
     table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid #1f2a37;padding:10px;text-align:left}
-    .muted{color:#9aa4b2;font-size:12px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-    pre{white-space:pre-wrap;background:#0b0f14;border:1px solid #1f2a37;border-radius:12px;padding:12px;max-height:260px;overflow:auto}
-    code{color:#c084fc}
+    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
+    th{font-size:12px;color:var(--muted);font-weight:600}
+    td{font-size:13px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    .btns button{padding:8px 10px;border-radius:10px}
+
+    .mono{
+      white-space:pre-wrap;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      max-height:420px;
+      overflow:auto;
+    }
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:6px 0 10px}
+    .toolbar .left,.toolbar .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:3px 8px;border-radius:999px;border:1px solid var(--line2);
+      font-size:11px;color:var(--muted)
+    }
+    .badge strong{color:var(--txt);font-weight:650}
+    .kv{display:flex;gap:10px;flex-wrap:wrap}
+    .kv .badge{background:rgba(255,255,255,.02)}
+    .small{font-size:11px}
   </style>
 </head>
+
 <body>
 <header>
-  <div>
-    <div style="font-size:18px;font-weight:700">OCPP Dashboard</div>
-    <div class="muted">Online, comandos e debug rápido</div>
+  <div class="brand">
+    <b>OCPP Dashboard</b>
+    <span>Online • comandos • logs • debug rápido</span>
   </div>
+
   <div class="row">
-    <span id="statusPill" class="pill bad">desconhecido</span>
-    <button onclick="refresh()">Atualizar</button>
+    <span id="statusPill" class="pill bad"><span class="dot"></span><span id="statusText">desconhecido</span></span>
+    <button class="ghost" onclick="refreshClients()">Atualizar</button>
   </div>
 </header>
 
 <div class="wrap">
 
   <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <div><b>Carregadores online</b> <span class="muted">(poll automático)</span></div>
-      <div class="muted">Gateway: <span id="gw"></span></div>
+    <div class="toolbar">
+      <div class="left">
+        <h3 style="margin:0">Status</h3>
+        <span class="badge">Gateway: <strong id="gw">(carregando…)</strong></span>
+        <span class="badge">Online: <strong id="onlineCount">0</strong></span>
+      </div>
+      <div class="right">
+        <label class="badge">
+          Poll (s)
+          <select id="pollSec" onchange="setPoll()" style="padding:6px 8px">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+          </select>
+        </label>
+        <label class="badge">
+          Buscar
+          <input id="search" oninput="renderClients()" placeholder="serial…" style="padding:6px 10px; width:170px"/>
+        </label>
+      </div>
     </div>
-    <div style="margin-top:10px">
-      <table>
-        <thead><tr><th>Serial</th><th>Ações rápidas</th></tr></thead>
-        <tbody id="clientsBody"><tr><td colspan="2" class="muted">Carregando...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="muted">O painel considera “online” o que o gateway expõe em <code>/ocpp/clients</code>. (Heartbeat deve atualizar o gateway.)</div>
   </div>
 
   <div class="grid">
+
+    <!-- COL 1: ONLINE -->
     <div class="card">
-      <b>Enviar comando</b>
-      <div class="muted" style="margin-top:6px">O painel chama <code>/api/send</code> (que repassa para o gateway).</div>
+      <h3>Carregadores online</h3>
+      <div class="muted" style="margin-bottom:10px">Clique em um serial para pré-preencher o comando.</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:35%">Serial</th>
+            <th>Ações rápidas</th>
+          </tr>
+        </thead>
+        <tbody id="clientsBody">
+          <tr><td colspan="2" class="muted">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-      <div class="row" style="margin-top:12px">
-        <input id="serial" placeholder="serialNumber (ex: 2222233333)" style="flex:1"/>
- <select id="action">
-  <!-- Operação -->
-  <option>RemoteStartTransaction</option>
-  <option>RemoteStopTransaction</option>
-  <option>UnlockConnector</option>
-  <option>Reset</option>
-  <option>ChangeAvailability</option>
+    <!-- COL 2: COMANDOS -->
+    <div class="card">
+      <h3>Enviar comando (CS → CP)</h3>
+      <div class="muted">Chama <code>/api/send</code> e repassa para o gateway.</div>
 
-  <!-- Consulta / Config -->
-  <option>GetConfiguration</option>
-  <option>ChangeConfiguration</option>
-  <option>ClearCache</option>
-
-  <!-- Diagnóstico / Firmware -->
-  <option>GetDiagnostics</option>
-  <option>UpdateFirmware</option>
-
-  <!-- Mensagens sob demanda -->
-  <option>TriggerMessage</option>
-
-  <!-- Reserva -->
-  <option>ReserveNow</option>
-  <option>CancelReservation</option>
-
-  <!-- Vendor / Proprietário -->
-  <option>DataTransfer</option>
-</select>
-
+      <div class="split" style="margin-top:12px">
+        <input id="serial" placeholder="serialNumber (ex: 2222233333)"/>
+        <select id="action" onchange="applyTemplate()"></select>
       </div>
 
-      <div class="muted" style="margin-top:10px">Payload (JSON):</div>
-      <textarea id="payload" rows="10" style="width:100%;margin-top:6px">{}</textarea>
+      <div class="toolbar" style="margin-top:10px">
+        <div class="left">
+          <span class="badge">Template: <strong id="tplName">—</strong></span>
+          <span class="badge">Dica: <span id="hint" class="small">Selecione a ação</span></span>
+        </div>
+        <div class="right">
+          <button class="ghost" onclick="applyTemplate()">Aplicar</button>
+          <button class="ghost" onclick="clearPayload()">Limpar</button>
+        </div>
+      </div>
 
-      <div class="row" style="margin-top:12px">
-        <button onclick="sendCmd()">Enviar</button>
-        <button onclick="fillTemplate()">Template</button>
-        <span class="muted" id="hint"></span>
+      <textarea id="payload" rows="12" style="width:100%">{}</textarea>
+
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <div class="row">
+          <button class="primary" onclick="sendCmd()">Enviar</button>
+          <button class="ghost" onclick="copyPayload()">Copiar payload</button>
+        </div>
+        <div class="muted small">Resposta abaixo</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h3 style="margin:0 0 8px 0">Resposta</h3>
+        <pre id="resp" class="mono">{}</pre>
       </div>
     </div>
-<div class="card">
-  <b>Logs</b>
 
-  <div class="row" style="margin-top:10px">
-    <select id="logType">
-      <option value="gateway">Gateway OCPP</option>
-      <option value="gateway_err">Gateway Erros</option>
-      <option value="dashboard">Dashboard</option>
-      <option value="nginx">Nginx</option>
-    </select>
-    <button onclick="loadLogs()">Carregar</button>
-  </div>
-
-  <pre id="logsBox" style="margin-top:10px;height:300px"></pre>
-</div>
-
+    <!-- COL 3: LOGS -->
     <div class="card">
-      <b>Resposta</b>
-      <div class="muted" style="margin-top:6px">Retorno do gateway.</div>
-      <pre id="resp">{}</pre>
-    </div>
-  </div>
+      <h3>Logs</h3>
 
+      <div class="toolbar">
+        <div class="left">
+          <select id="logType">
+            <option value="gateway">Gateway OCPP</option>
+            <option value="gateway_err">Gateway Erros</option>
+            <option value="dashboard">Dashboard</option>
+            <option value="dashboard_err">Dashboard Erros</option>
+            <option value="nginx">Nginx error</option>
+            <option value="nginx_access">Nginx access</option>
+          </select>
+          <button onclick="loadLogs(true)">Carregar</button>
+        </div>
+
+        <div class="right">
+          <label class="badge">
+            Modo
+            <select id="logMode" onchange="resetLogState()" style="padding:6px 8px">
+              <option value="full" selected>Completo</option>
+              <option value="new">Somente novos</option>
+            </select>
+          </label>
+          <label class="badge">
+            Atualiza (s)
+            <select id="logPollSec" onchange="setLogPoll()" style="padding:6px 8px">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+            </select>
+          </label>
+          <button class="ghost" onclick="clearLogsBox()">Limpar tela</button>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-bottom:10px">
+        <span class="badge">💡 Dica</span>
+        Se o server retorna “tail”, o início muda. No modo <b>Completo</b> o painel sempre renderiza o retorno inteiro (não corta).
+      </div>
+
+      <pre id="logsBox" class="mono" style="height:440px"></pre>
+    </div>
+
+  </div>
 </div>
 
 <script>
-  // Ajuste aqui se o gateway não estiver em 127.0.0.1:3000 (normalmente está)
-async function loadConfig(){
-  try{
-    const r = await fetch("/api/config");
-    const j = await r.json();
-    document.getElementById("gw").textContent = j.gatewayUrl || "(indefinido)";
-  }catch(e){
-    document.getElementById("gw").textContent = "(erro lendo config)";
+  // =========================
+  // Templates OCPP 1.6J (CS -> CP)
+  // Perfis: Core, Firmware, Local Auth, Reservation, Smart Charging, Remote Trigger
+  // =========================
+  // Lista baseada nos perfis suportados e ações comuns do OCPP 1.6J. :contentReference[oaicite:1]{index=1}
+  const COMMANDS = [
+    // Core
+    { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
+    { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
+    { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
+    { group:"Core", action:"Reset", tpl:{ type:"Soft" } }, // Soft | Hard
+    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } }, // Operative | Inoperative
+    { group:"Core", action:"ClearCache", tpl:{} },
+    { group:"Core", action:"GetConfiguration", tpl:{ key:[] } }, // [] => tudo
+    { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
+    { group:"Core", action:"DataTransfer", tpl:{ vendorId:"SeuVendor", messageId:"ping", data:"hello" } },
+
+    // Firmware Management
+    { group:"Firmware", action:"GetDiagnostics", tpl:{ location:"https://ocpptarget.cloud/diag", retries:1, retryInterval:60 } },
+    { group:"Firmware", action:"UpdateFirmware", tpl:{ location:"https://ocpptarget.cloud/fw.bin", retries:1, retryInterval:60, retrieveDate:new Date(Date.now()+5*60*1000).toISOString() } },
+
+    // Remote Trigger
+    { group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
+
+    // Reservation
+    { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
+    { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
+
+    // Local Auth List Management
+    { group:"LocalAuth", action:"GetLocalListVersion", tpl:{} },
+    { group:"LocalAuth", action:"SendLocalList", tpl:{
+      listVersion: 1,
+      updateType: "Full", // Full | Differential
+      localAuthorizationList: [
+        { idTag: "TARGET001", idTagInfo: { status: "Accepted" } }
+      ]
+    } },
+
+    // Smart Charging
+    { group:"SmartCharging", action:"ClearChargingProfile", tpl:{ id: null, connectorId: 0, chargingProfilePurpose: "TxProfile", stackLevel: 0 } },
+    { group:"SmartCharging", action:"GetCompositeSchedule", tpl:{ connectorId:1, duration:3600, chargingRateUnit:"A" } }, // "A" or "W"
+    { group:"SmartCharging", action:"SetChargingProfile", tpl:{
+      connectorId: 1,
+      csChargingProfiles: {
+        chargingProfileId: 1,
+        stackLevel: 0,
+        chargingProfilePurpose: "TxProfile",
+        chargingProfileKind: "Absolute",
+        chargingSchedule: {
+          duration: 3600,
+          startSchedule: new Date().toISOString(),
+          chargingRateUnit: "A",
+          chargingSchedulePeriod: [
+            { startPeriod: 0, limit: 16, numberPhases: 1 }
+          ]
+        }
+      }
+    } }
+  ];
+
+  function fillActions(){
+    const sel = document.getElementById("action");
+    sel.innerHTML = "";
+    const groups = [...new Set(COMMANDS.map(c => c.group))];
+
+    for (const g of groups){
+      const og = document.createElement("optgroup");
+      og.label = g;
+      COMMANDS.filter(c => c.group === g).forEach(c => {
+        const op = document.createElement("option");
+        op.value = c.action;
+        op.textContent = c.action;
+        og.appendChild(op);
+      });
+      sel.appendChild(og);
+    }
   }
-}
-const templates = {
-  // Operação
-  RemoteStartTransaction: { idTag: "TARGET001", connectorId: 1 },
-  RemoteStopTransaction: { transactionId: 12345 },
-  UnlockConnector: { connectorId: 1 },
-  Reset: { type: "Soft" }, // ou "Hard"
-  ChangeAvailability: { connectorId: 1, type: "Operative" }, // ou "Inoperative"
 
-  // Config
-  GetConfiguration: { key: [] }, // [] = tudo
-  ChangeConfiguration: { key: "HeartbeatInterval", value: "60" },
-  ClearCache: {},
-
-  // Diagnóstico / Firmware
-  GetDiagnostics: { location: "https://ocpptarget.cloud/diag", retries: 1, retryInterval: 60 },
-  UpdateFirmware: { location: "https://ocpptarget.cloud/fw.bin", retries: 1, retrieveDate: new Date(Date.now()+5*60*1000).toISOString() },
-
-  // Mensagens sob demanda
-  TriggerMessage: { requestedMessage: "StatusNotification", connectorId: 1 },
-
-  // Reserva
-  ReserveNow: { connectorId: 1, expiryDate: new Date(Date.now()+30*60*1000).toISOString(), idTag: "TARGET001", reservationId: 101 },
-  CancelReservation: { reservationId: 101 },
-
-  // Vendor
-  DataTransfer: { vendorId: "SeuVendor", messageId: "Hello", data: "ping" },
-};
-
-
-  function setPill(ok){
-    const el = document.getElementById("statusPill");
-    el.textContent = ok ? "gateway ok" : "gateway erro";
-    el.className = "pill " + (ok ? "ok" : "bad");
+  function getTemplate(action){
+    const found = COMMANDS.find(c => c.action === action);
+    return found ? found.tpl : {};
   }
 
-async function refresh(){
-  try{
-    const r = await fetch("/api/clients");
-    const j = await r.json();
-
-    // aceita dois formatos: {ok:true, clients:[...]} OU simplesmente [...]
-    const clients = Array.isArray(j) ? j : (j.clients || []);
-    setPill(true);
-    renderClients(clients);
-  }catch(e){
-    setPill(false);
-    renderClients([]);
-  }
-}
-
-function renderClients(list){
-  const body = document.getElementById("clientsBody");
-  if(!list.length){
-    body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
-    return;
+  // =========================
+  // Status
+  // =========================
+  function setPill(state){
+    const pill = document.getElementById("statusPill");
+    const text = document.getElementById("statusText");
+    pill.classList.remove("ok","bad","warn");
+    pill.classList.add(state);
+    text.textContent = (state === "ok") ? "gateway ok" : (state === "warn" ? "parcial" : "gateway erro");
   }
 
-  let html = "";
-  for (const sn of list) {
-    html +=
-      '<tr>' +
-        '<td><b>' + sn + '</b></td>' +
-        '<td class="row">' +
-          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;Status&quot;)">Trigger Status</button>' +
-          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;Meter&quot;)">Trigger Meter</button>' +
-          '<button onclick="quick(&quot;' + sn + '&quot;,&quot;SoftReset&quot;)">Soft Reset</button>' +
-        '</td>' +
-      '</tr>';
+  async function loadConfig(){
+    try{
+      const r = await fetch("/api/config");
+      const j = await r.json();
+      document.getElementById("gw").textContent = j.gatewayUrl || "(indefinido)";
+    }catch(e){
+      document.getElementById("gw").textContent = "(erro lendo config)";
+    }
   }
-  body.innerHTML = html;
-}
 
+  // =========================
+  // Clients
+  // =========================
+  let clientsRaw = [];
+  async function refreshClients(){
+    try{
+      const r = await fetch("/api/clients");
+      const j = await r.json();
+      const list = Array.isArray(j) ? j : (j.clients || []);
+      clientsRaw = list;
+      setPill("ok");
+      renderClients();
+    }catch(e){
+      clientsRaw = [];
+      setPill("bad");
+      renderClients();
+    }
+  }
 
-  function fillTemplate(){
+  function normalizeSerial(x){
+    if (typeof x === "string") return x;
+    if (!x || typeof x !== "object") return String(x ?? "");
+    return x.serialNumber || x.chargePointId || x.id || x.sn || "[obj]";
+  }
+
+  function renderClients(){
+    const body = document.getElementById("clientsBody");
+    const q = (document.getElementById("search").value || "").trim().toLowerCase();
+
+    const list = clientsRaw.map(normalizeSerial).filter(Boolean);
+    const filtered = q ? list.filter(s => s.toLowerCase().includes(q)) : list;
+
+    document.getElementById("onlineCount").textContent = String(filtered.length);
+
+    if(!filtered.length){
+      body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filtered.map(sn => `
+      <tr>
+        <td>
+          <b style="cursor:pointer" onclick="pickSerial('${escapeHtml(sn)}')">${escapeHtml(sn)}</b>
+          <div class="muted small">via gateway</div>
+        </td>
+        <td>
+          <div class="btns">
+            <button onclick="quick('${escapeHtml(sn)}','Status')">Trigger Status</button>
+            <button onclick="quick('${escapeHtml(sn)}','Meter')">Trigger Meter</button>
+            <button onclick="quick('${escapeHtml(sn)}','SoftReset')">Soft Reset</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function pickSerial(sn){
+    document.getElementById("serial").value = sn;
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  // =========================
+  // Command send
+  // =========================
+  function applyTemplate(){
     const action = document.getElementById("action").value;
-    document.getElementById("payload").value = JSON.stringify(templates[action] || {}, null, 2);
+    const tpl = getTemplate(action);
+    document.getElementById("payload").value = JSON.stringify(tpl || {}, null, 2);
+    document.getElementById("tplName").textContent = action;
     document.getElementById("hint").textContent = "template aplicado";
   }
 
+  function clearPayload(){
+    document.getElementById("payload").value = "{}";
+    document.getElementById("hint").textContent = "payload limpo";
+  }
+
+  function copyPayload(){
+    const txt = document.getElementById("payload").value || "";
+    navigator.clipboard?.writeText(txt);
+    document.getElementById("hint").textContent = "payload copiado";
+  }
+
   async function sendCmd(){
-    const serialNumber = document.getElementById("serial").value.trim();
+    const serialNumber = (document.getElementById("serial").value || "").trim();
     const action = document.getElementById("action").value;
+
+    if(!serialNumber){
+      document.getElementById("resp").textContent = "Informe o serialNumber.";
+      return;
+    }
 
     let payload = {};
     try{
@@ -238,19 +458,21 @@ function renderClients(list){
       return;
     }
 
-    const r = await fetch("/api/send", {
-      method:"POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ serialNumber, action, payload })
-    });
-
-    const txt = await r.text();
-    document.getElementById("resp").textContent = txt;
+    try{
+      const r = await fetch("/api/send", {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ serialNumber, action, payload })
+      });
+      const txt = await r.text();
+      document.getElementById("resp").textContent = txt;
+    }catch(e){
+      document.getElementById("resp").textContent = String(e?.message || e);
+    }
   }
 
   async function quick(sn, type){
-    document.getElementById("serial").value = sn;
-
+    pickSerial(sn);
     if(type === "Status"){
       document.getElementById("action").value = "TriggerMessage";
       document.getElementById("payload").value = JSON.stringify({ requestedMessage:"StatusNotification", connectorId:1 }, null, 2);
@@ -263,78 +485,99 @@ function renderClients(list){
       document.getElementById("action").value = "Reset";
       document.getElementById("payload").value = JSON.stringify({ type:"Soft" }, null, 2);
     }
-
     await sendCmd();
   }
 
-  fillTemplate();
-  refresh();
-  setInterval(refresh, 3000);
+  // =========================
+  // Logs (sem cortar início)
+  // =========================
+  let logTimer = null;
+  let lastRendered = ""; // para modo "Somente novos"
 
+  function resetLogState(){
+    lastRendered = "";
+    loadLogs(true);
+  }
 
+  function setLogPoll(){
+    if (logTimer) clearInterval(logTimer);
+    const sec = Number(document.getElementById("logPollSec").value || "2");
+    loadLogs(false);
+    logTimer = setInterval(() => loadLogs(false), sec * 1000);
+  }
+
+  function clearLogsBox(){
+    document.getElementById("logsBox").textContent = "";
+    lastRendered = "";
+  }
+
+  async function loadLogs(force){
+    const t = document.getElementById("logType").value;
+    let j;
+    try{
+      const r = await fetch(`/api/logs/${t}`);
+      j = await r.json();
+    }catch(e){
+      return;
+    }
+    if (!j?.ok) return;
+
+    const box = document.getElementById("logsBox");
+    const current = String(j.log || "");
+
+    const mode = document.getElementById("logMode").value;
+
+    if (mode === "full"){
+      // ✅ sempre renderiza o retorno completo (não corta início)
+      if (force || box.textContent !== current){
+        box.textContent = current;
+        box.scrollTop = 0; // topo
+      }
+      lastRendered = current;
+      return;
+    }
+
+    // mode === "new"
+    // ✅ adiciona apenas o que é novo, mas sem assumir que tail mantém o começo
+    // estratégia: se o retorno atual NÃO contém o lastRendered, resetamos e mostramos tudo como novo
+    if (!lastRendered){
+      box.textContent = current;
+      box.scrollTop = 0;
+      lastRendered = current;
+      return;
+    }
+
+    if (current.includes(lastRendered)){
+      const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
+      if (newPart){
+        box.textContent = (newPart + "\n\n" + box.textContent).trim();
+        box.scrollTop = 0;
+      }
+      lastRendered = current;
+    }else{
+      // tail “andou” e o início mudou: evita bug de corte
+      box.textContent = current + "\n\n" + box.textContent;
+      box.scrollTop = 0;
+      lastRendered = current;
+    }
+  }
+
+  // =========================
+  // Poll / init
+  // =========================
+  let pollTimer = null;
+  function setPoll(){
+    if (pollTimer) clearInterval(pollTimer);
+    const sec = Number(document.getElementById("pollSec").value || "3");
+    refreshClients();
+    pollTimer = setInterval(refreshClients, sec * 1000);
+  }
+
+  fillActions();
   loadConfig();
-
-  async function loadLogs(){
-  const t = document.getElementById("logType").value;
-
-  const r = await fetch(`/api/logs/${t}`);
-  const j = await r.json();
-  if (!j.ok) return;
-
-  const box = document.getElementById("logsBox");
-
-  // divide linhas
-  const current = j.log || "";
-
-  // primeira carga
-  if (!lastLogSnapshot) {
-    lastLogSnapshot = current;
-    box.textContent = current;
-    box.scrollTop = 0;
-    return;
-  }
-
-  // detecta apenas o que é novo
-  let newPart = "";
-  if (current.length > lastLogSnapshot.length) {
-    newPart = current.slice(lastLogSnapshot.length).trim();
-  }
-
-  lastLogSnapshot = current;
-
-  if (!newPart) return;
-
-  // 🔥 NOVOS LOGS EM CIMA
-box.textContent = newPart + "\n\n" + box.textContent;
-
-  // mantém scroll no topo
-  box.scrollTop = 0;
-}
-  function prettify(line){
-  return line
-    .replace("[WS]", "🔌 [WS]")
-    .replace("[OCPP] RX", "⬅️  [OCPP RX]")
-    .replace("[OCPP] TX", "➡️  [OCPP TX]")
-    .replace("[ERROR]", "❌ [ERROR]");
-}
-
-let lastLogSnapshot = "";
-let logTimer = null;
-
-function startLogs(){
-  if (logTimer) clearInterval(logTimer);
-  loadLogs();
-  logTimer = setInterval(loadLogs, 2000);
-}
-
-function stopLogs(){
-  clearInterval(logTimer);
-  logTimer = null;
-}
-
-
-  startLogs();
-
+  applyTemplate();
+  setPoll();
+  setLogPoll();
 </script>
 </body>
 </html>
