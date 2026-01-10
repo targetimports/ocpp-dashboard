@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCPP Dashboard - Monitor em Tempo Real</title>
+    <title>OCPP Dashboard - Monitor e Controle</title>
     <style>
         :root {
             --bg-primary: #0f172a;
             --bg-secondary: #1e293b;
             --bg-tertiary: #334155;
+            --bg-command: #1a1f2e;
             --text-primary: #f1f5f9;
             --text-secondary: #cbd5e1;
             --text-muted: #94a3b8;
@@ -22,6 +23,7 @@
             --meter: #10b981;
             --status: #f59e0b;
             --txn: #3b82f6;
+            --command: #ec4899;
             --radius: 8px;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
@@ -77,7 +79,7 @@
         /* Main Layout */
         .container {
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 300px 1fr 400px;
             min-height: calc(100vh - 70px);
         }
 
@@ -217,6 +219,7 @@
             border-radius: var(--radius);
             border: 1px solid var(--border-color);
             overflow: hidden;
+            height: calc(100vh - 300px);
         }
 
         .messages-header {
@@ -233,7 +236,7 @@
         }
 
         .messages-list {
-            height: calc(100vh - 300px);
+            height: calc(100% - 60px);
             overflow-y: auto;
             padding: 1rem;
         }
@@ -275,6 +278,10 @@
 
         .message-item[data-type="WS"] {
             border-left-color: var(--info);
+        }
+
+        .message-item[data-type="COMMAND"] {
+            border-left-color: var(--command);
         }
 
         .message-header {
@@ -329,6 +336,11 @@
             color: var(--info);
         }
 
+        .message-badge.command {
+            background-color: rgba(236, 72, 153, 0.2);
+            color: var(--command);
+        }
+
         .message-time {
             font-size: 0.875rem;
             color: var(--text-muted);
@@ -346,91 +358,205 @@
             word-wrap: break-word;
         }
 
-        .message-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.75rem;
-            font-size: 0.875rem;
+        /* Commands Panel */
+        .commands-panel {
+            background-color: var(--bg-command);
+            border-left: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
         }
 
-        .detail-item {
+        .commands-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .commands-header h2 {
             display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .command-section {
+            margin-bottom: 2rem;
+        }
+
+        .command-section h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .command-btn {
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .detail-label {
-            color: var(--text-muted);
+        .command-btn:hover {
+            border-color: var(--command);
+            background-color: rgba(236, 72, 153, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .command-btn i {
+            font-size: 1.5rem;
+            color: var(--command);
+        }
+
+        .command-btn span {
+            font-size: 0.875rem;
             font-weight: 500;
         }
 
-        .detail-value {
-            font-weight: 600;
-        }
-
-        /* Meter Details */
-        .meter-details {
+        /* Quick Actions */
+        .quick-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 0.75rem;
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
         }
 
-        .meter-point {
+        .quick-btn {
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--success);
             background-color: rgba(16, 185, 129, 0.1);
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
-        .meter-measurand {
-            font-size: 0.75rem;
+        .quick-btn.danger:hover {
+            border-color: var(--danger);
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
             color: var(--text-muted);
-            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
 
-        .meter-value {
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--command);
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+        }
+
+        .textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Send Button */
+        .send-btn {
+            width: 100%;
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: none;
+            background: linear-gradient(135deg, var(--command), #d946ef);
+            color: white;
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
             font-size: 1rem;
-            color: var(--meter);
         }
 
-        .meter-unit {
-            font-size: 0.75rem;
+        .send-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Response Box */
+        .response-box {
+            margin-top: 1.5rem;
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .response-box h3 {
+            font-size: 0.875rem;
             color: var(--text-muted);
-            margin-left: 0.25rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Status Details */
-        .status-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.75rem;
-            margin-top: 0.75rem;
-        }
-
-        .status-item {
-            background-color: rgba(245, 158, 11, 0.1);
+        .response-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            background-color: rgba(0, 0, 0, 0.3);
             padding: 0.75rem;
             border-radius: var(--radius);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        /* Transaction Details */
-        .txn-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.75rem;
-            margin-top: 0.75rem;
-        }
-
-        .txn-item {
-            background-color: rgba(59, 130, 246, 0.1);
-            padding: 0.75rem;
-            border-radius: var(--radius);
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         /* Controls */
@@ -475,7 +601,25 @@
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 250px 1fr 350px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .commands-panel {
+                grid-column: span 2;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+        }
+
+        @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
             }
@@ -483,8 +627,13 @@
             .sidebar {
                 display: none;
             }
+            
+            .commands-panel {
+                grid-column: 1;
+            }
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header>
@@ -541,6 +690,7 @@
                     <button class="filter-btn" data-filter="STATUS">Status</button>
                     <button class="filter-btn" data-filter="TXN">Transactions</button>
                     <button class="filter-btn" data-filter="WS">WebSocket</button>
+                    <button class="filter-btn" data-filter="COMMAND">Comandos</button>
                 </div>
                 
                 <select id="serialFilter" class="filter-select">
@@ -575,13 +725,92 @@
                 </div>
             </div>
         </main>
+
+        <!-- Commands Panel -->
+        <aside class="commands-panel">
+            <div class="commands-header">
+                <h2><i class="fas fa-terminal"></i> Enviar Comandos</h2>
+            </div>
+
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="commandPanel.triggerStatus()">
+                    <i class="fas fa-sync-alt"></i> Status
+                </button>
+                <button class="quick-btn" onclick="commandPanel.triggerMeter()">
+                    <i class="fas fa-tachometer-alt"></i> Meter Values
+                </button>
+                <button class="quick-btn" onclick="commandPanel.softReset()">
+                    <i class="fas fa-redo"></i> Soft Reset
+                </button>
+                <button class="quick-btn danger" onclick="commandPanel.hardReset()">
+                    <i class="fas fa-power-off"></i> Hard Reset
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label for="targetSerial"><i class="fas fa-microchip"></i> Serial do Dispositivo</label>
+                <input type="text" id="targetSerial" class="form-input" placeholder="Ex: 2222233333" value="2222233333">
+            </div>
+
+            <div class="form-group">
+                <label for="commandAction"><i class="fas fa-bolt"></i> Ação OCPP</label>
+                <select id="commandAction" class="form-input" onchange="commandPanel.loadTemplate()">
+                    <option value="">Selecione uma ação...</option>
+                    <optgroup label="Core">
+                        <option value="RemoteStartTransaction">RemoteStartTransaction</option>
+                        <option value="RemoteStopTransaction">RemoteStopTransaction</option>
+                        <option value="UnlockConnector">UnlockConnector</option>
+                        <option value="Reset">Reset</option>
+                        <option value="ChangeAvailability">ChangeAvailability</option>
+                        <option value="GetConfiguration">GetConfiguration</option>
+                        <option value="ChangeConfiguration">ChangeConfiguration</option>
+                    </optgroup>
+                    <optgroup label="Trigger">
+                        <option value="TriggerMessage">TriggerMessage</option>
+                    </optgroup>
+                    <optgroup label="Firmware">
+                        <option value="GetDiagnostics">GetDiagnostics</option>
+                        <option value="UpdateFirmware">UpdateFirmware</option>
+                    </optgroup>
+                    <optgroup label="Reservation">
+                        <option value="ReserveNow">ReserveNow</option>
+                        <option value="CancelReservation">CancelReservation</option>
+                    </optgroup>
+                    <optgroup label="Local Auth">
+                        <option value="GetLocalListVersion">GetLocalListVersion</option>
+                        <option value="SendLocalList">SendLocalList</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="commandPayload"><i class="fas fa-code"></i> Payload JSON</label>
+                <textarea id="commandPayload" class="form-input textarea" placeholder="{}"></textarea>
+            </div>
+
+            <button id="sendCommandBtn" class="send-btn" onclick="commandPanel.sendCommand()">
+                <i class="fas fa-paper-plane"></i> Enviar Comando
+            </button>
+
+            <div class="response-box">
+                <h3>
+                    <span>Resposta</span>
+                    <button onclick="commandPanel.copyResponse()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </h3>
+                <div id="commandResponse" class="response-content">
+                    Aguardando comando...
+                </div>
+            </div>
+        </aside>
     </div>
 
     <script>
         class OCPPDashboard {
             constructor() {
                 this.messages = [];
-                this.devices = new Set();
+                this.devices = new Set(['2222233333']); // Starting with one device
                 this.isPaused = false;
                 this.currentFilters = {
                     type: 'all',
@@ -595,6 +824,7 @@
                 this.setupEventListeners();
                 this.startPolling();
                 this.updateStats();
+                this.updateDeviceList();
                 this.simulateInitialData();
             }
 
@@ -630,7 +860,6 @@
             }
 
             startPolling() {
-                // In a real implementation, this would connect to WebSocket or poll an API
                 setInterval(() => {
                     if (!this.isPaused) {
                         this.fetchNewMessages();
@@ -639,7 +868,6 @@
             }
 
             simulateInitialData() {
-                // Add some initial simulated data
                 const initialLogs = `[OCPP IN] 2222233333 CALL action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua payload={}
 [ONLINE] 2222233333 agora ONLINE (Heartbeat)
 [OCPP OUT] 2222233333 CALLRESULT action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua
@@ -658,8 +886,6 @@
 
             async fetchNewMessages() {
                 try {
-                    // In a real implementation, this would fetch from an API
-                    // For now, we'll simulate new messages
                     this.simulateNewMessage();
                     this.updateStats();
                 } catch (error) {
@@ -709,14 +935,12 @@
             parseMessage(rawMessage) {
                 const timestamp = new Date().toLocaleTimeString();
                 
-                // Try to extract serial number
                 let serial = null;
                 const serialMatch = rawMessage.match(/\[.*?\] (\d+)/);
                 if (serialMatch) {
                     serial = serialMatch[1];
                 }
 
-                // Determine message type
                 let type = 'OTHER';
                 let action = null;
                 
@@ -740,18 +964,18 @@
                 } else if (rawMessage.includes('[WS]')) {
                     type = 'WS';
                     action = 'WebSocket';
+                } else if (rawMessage.includes('[COMMAND]')) {
+                    type = 'COMMAND';
+                    action = 'Command';
                 }
 
-                // Try to parse JSON if present
                 let jsonData = null;
                 try {
                     const jsonMatch = rawMessage.match(/\{[\s\S]*\}$/);
                     if (jsonMatch) {
                         jsonData = JSON.parse(jsonMatch[0]);
                     }
-                } catch (e) {
-                    // Not a JSON message
-                }
+                } catch (e) {}
 
                 return {
                     id: Date.now() + Math.random(),
@@ -780,7 +1004,6 @@
                         
                     case 'OCPP IN':
                     case 'OCPP OUT':
-                        // Extract action and ID
                         const actionMatch = raw.match(/action=(\w+)/);
                         const idMatch = raw.match(/id=([^\s]+)/);
                         const forMatch = raw.match(/for=(\w+)/);
@@ -813,21 +1036,16 @@
                 div.className = 'message-item';
                 div.dataset.type = msg.type;
                 
-                // Format content for display
                 let formattedContent = msg.raw;
                 try {
-                    // Try to format JSON nicely
                     const jsonMatch = msg.raw.match(/\{[\s\S]*\}$/);
                     if (jsonMatch) {
                         const jsonStr = jsonMatch[0];
                         const parsed = JSON.parse(jsonStr);
                         formattedContent = msg.raw.replace(jsonStr, JSON.stringify(parsed, null, 2));
                     }
-                } catch (e) {
-                    // Keep original if can't parse
-                }
+                } catch (e) {}
                 
-                // Get badge class
                 let badgeClass = '';
                 switch(msg.type) {
                     case 'OCPP IN': badgeClass = 'ocpp-in'; break;
@@ -836,6 +1054,7 @@
                     case 'STATUS': badgeClass = 'status'; break;
                     case 'TXN': badgeClass = 'txn'; break;
                     case 'WS': badgeClass = 'ws'; break;
+                    case 'COMMAND': badgeClass = 'command'; break;
                 }
                 
                 let html = `
@@ -850,7 +1069,6 @@
                     <div class="message-content">${this.escapeHtml(formattedContent)}</div>
                 `;
                 
-                // Add details based on message type
                 if (msg.type === 'METER' && msg.jsonData && msg.jsonData.points) {
                     html += this.createMeterDetails(msg.jsonData.points);
                 }
@@ -904,17 +1122,14 @@
 
             getFilteredMessages() {
                 return this.messages.filter(msg => {
-                    // Type filter
                     if (this.currentFilters.type !== 'all' && msg.type !== this.currentFilters.type) {
                         return false;
                     }
                     
-                    // Serial filter
                     if (this.currentFilters.serial !== 'all' && msg.serial !== this.currentFilters.serial) {
                         return false;
                     }
                     
-                    // Action filter
                     if (this.currentFilters.action !== 'all' && msg.action !== this.currentFilters.action) {
                         return false;
                     }
@@ -937,28 +1152,27 @@
                 const container = document.getElementById('serialList');
                 const filter = document.getElementById('serialFilter');
                 
-                // Clear existing options except "all"
                 container.innerHTML = '';
                 const filterOptions = Array.from(filter.querySelectorAll('option')).slice(1);
                 filterOptions.forEach(opt => opt.remove());
                 
-                // Add devices
                 this.devices.forEach(serial => {
-                    // Add to sidebar list
                     const item = document.createElement('div');
                     item.className = 'serial-item';
+                    item.onclick = () => {
+                        document.getElementById('targetSerial').value = serial;
+                    };
                     item.innerHTML = `
                         <div class="serial-header">
                             <div class="serial-id">${serial}</div>
                             <div class="serial-status"></div>
                         </div>
                         <div style="color: var(--text-muted); font-size: 0.875rem;">
-                            Última mensagem: ${new Date().toLocaleTimeString()}
+                            Clique para usar
                         </div>
                     `;
                     container.appendChild(item);
                     
-                    // Add to filter dropdown
                     const option = document.createElement('option');
                     option.value = serial;
                     option.textContent = serial;
@@ -981,14 +1195,213 @@
             }
 
             updatePollInterval(interval) {
-                // In a real implementation, this would update the polling interval
                 console.log('Polling interval updated to:', interval);
+            }
+
+            addCommandMessage(command, response) {
+                const message = `[COMMAND] ${command.serialNumber} ${command.action} ${JSON.stringify(command.payload)}`;
+                const responseMessage = `[RESPONSE] ${JSON.stringify(response, null, 2)}`;
+                
+                this.parseAndAddMessage(message);
+                
+                // Add response as a separate message
+                setTimeout(() => {
+                    this.parseAndAddMessage(responseMessage);
+                }, 500);
             }
         }
 
-        // Initialize the dashboard when the page loads
+        class CommandPanel {
+            constructor() {
+                this.templates = {
+                    RemoteStartTransaction: {
+                        idTag: "TARGET001",
+                        connectorId: 1
+                    },
+                    RemoteStopTransaction: {
+                        transactionId: 12345
+                    },
+                    UnlockConnector: {
+                        connectorId: 1
+                    },
+                    Reset: {
+                        type: "Soft"
+                    },
+                    ChangeAvailability: {
+                        connectorId: 1,
+                        type: "Operative"
+                    },
+                    GetConfiguration: {
+                        key: []
+                    },
+                    ChangeConfiguration: {
+                        key: "HeartbeatInterval",
+                        value: "60"
+                    },
+                    TriggerMessage: {
+                        requestedMessage: "StatusNotification",
+                        connectorId: 1
+                    },
+                    GetDiagnostics: {
+                        location: "https://ocpptarget.cloud/diag",
+                        retries: 1,
+                        retryInterval: 60
+                    },
+                    UpdateFirmware: {
+                        location: "https://ocpptarget.cloud/fw.bin",
+                        retries: 1,
+                        retryInterval: 60,
+                        retrieveDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+                    },
+                    ReserveNow: {
+                        connectorId: 1,
+                        expiryDate: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                        idTag: "TARGET001",
+                        reservationId: 101
+                    },
+                    CancelReservation: {
+                        reservationId: 101
+                    },
+                    GetLocalListVersion: {},
+                    SendLocalList: {
+                        listVersion: 1,
+                        updateType: "Full",
+                        localAuthorizationList: [
+                            { idTag: "TARGET001", idTagInfo: { status: "Accepted" } }
+                        ]
+                    }
+                };
+            }
+
+            loadTemplate() {
+                const action = document.getElementById('commandAction').value;
+                if (action && this.templates[action]) {
+                    const template = this.templates[action];
+                    document.getElementById('commandPayload').value = JSON.stringify(template, null, 2);
+                }
+            }
+
+            async sendCommand() {
+                const serialNumber = document.getElementById('targetSerial').value.trim();
+                const action = document.getElementById('commandAction').value;
+                let payload = {};
+                
+                if (!serialNumber) {
+                    this.showResponse('❌ Informe o serial do dispositivo', true);
+                    return;
+                }
+                
+                if (!action) {
+                    this.showResponse('❌ Selecione uma ação OCPP', true);
+                    return;
+                }
+                
+                try {
+                    payload = JSON.parse(document.getElementById('commandPayload').value || '{}');
+                } catch (e) {
+                    this.showResponse('❌ Payload JSON inválido: ' + e.message, true);
+                    return;
+                }
+                
+                const command = {
+                    serialNumber,
+                    action,
+                    payload
+                };
+                
+                this.showResponse('⏳ Enviando comando...', false);
+                document.getElementById('sendCommandBtn').disabled = true;
+                
+                try {
+                    // Simulate API call
+                    await this.simulateApiCall(command);
+                    
+                    // Add to messages list
+                    window.dashboard.addCommandMessage(command, {
+                        status: "Accepted",
+                        timestamp: new Date().toISOString(),
+                        messageId: this.generateId()
+                    });
+                    
+                    this.showResponse('✅ Comando enviado com sucesso!\nStatus: Accepted\n' + 
+                                    `ID: ${this.generateId()}\n` +
+                                    `Timestamp: ${new Date().toLocaleTimeString()}`, false);
+                } catch (error) {
+                    this.showResponse(`❌ Erro: ${error.message}`, true);
+                } finally {
+                    document.getElementById('sendCommandBtn').disabled = false;
+                }
+            }
+
+            async simulateApiCall(command) {
+                // Simulate network delay
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({
+                            ok: true,
+                            status: "Accepted",
+                            timestamp: new Date().toISOString()
+                        });
+                    }, 1000);
+                });
+            }
+
+            triggerStatus() {
+                document.getElementById('commandAction').value = 'TriggerMessage';
+                document.getElementById('commandPayload').value = JSON.stringify({
+                    requestedMessage: "StatusNotification",
+                    connectorId: 1
+                }, null, 2);
+            }
+
+            triggerMeter() {
+                document.getElementById('commandAction').value = 'TriggerMessage';
+                document.getElementById('commandPayload').value = JSON.stringify({
+                    requestedMessage: "MeterValues",
+                    connectorId: 1
+                }, null, 2);
+            }
+
+            softReset() {
+                document.getElementById('commandAction').value = 'Reset';
+                document.getElementById('commandPayload').value = JSON.stringify({
+                    type: "Soft"
+                }, null, 2);
+            }
+
+            hardReset() {
+                document.getElementById('commandAction').value = 'Reset';
+                document.getElementById('commandPayload').value = JSON.stringify({
+                    type: "Hard"
+                }, null, 2);
+            }
+
+            showResponse(message, isError) {
+                const responseBox = document.getElementById('commandResponse');
+                responseBox.textContent = message;
+                responseBox.style.color = isError ? 'var(--danger)' : 'var(--success)';
+            }
+
+            copyResponse() {
+                const response = document.getElementById('commandResponse').textContent;
+                navigator.clipboard.writeText(response).then(() => {
+                    this.showResponse('✅ Resposta copiada para a área de transferência!', false);
+                    setTimeout(() => this.showResponse('', false), 2000);
+                });
+            }
+
+            generateId() {
+                return Math.random().toString(36).substr(2, 9);
+            }
+        }
+
+        // Initialize the dashboard and command panel
         document.addEventListener('DOMContentLoaded', () => {
             window.dashboard = new OCPPDashboard();
+            window.commandPanel = new CommandPanel();
+            
+            // Load initial template
+            commandPanel.loadTemplate();
         });
     </script>
 </body>
