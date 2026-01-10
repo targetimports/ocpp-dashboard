@@ -627,6 +627,42 @@
     return "other";
   }
 
+  function inferEvent(line, tag, action, json, forAction){
+    // 1) action=... (mais confiável)    // 1) action=... (mais confiável)
+    if(action) return action;
+
+    // 1.1) CALLRESULT for=...
+    if(forAction) return forAction;
+
+    // 2) tags "fortes" como evento (STATUS/METER/ONLINE/LOG)
+    const tagUpper = String(tag||"").toUpperCase();
+    if(tagUpper === "STATUS") return "STATUS";
+    if(tagUpper === "METER") return "METER";
+    if(tagUpper === "ONLINE") return "ONLINE";
+    if(tagUpper === "OFFLINE") return "OFFLINE";
+    if(tagUpper === "LOG") return "LOG";
+
+    // 3) campos comuns dentro do JSON (quando gateway não escreve action=)
+    if(json && typeof json === "object"){
+      if(typeof json.action === "string" && json.action) return json.action;
+      if(typeof json.requestedMessage === "string" && json.requestedMessage) return json.requestedMessage;
+      if(typeof json.messageId === "string" && json.messageId) return json.messageId;
+      if(typeof json.event_type === "string" && json.event_type) return json.event_type;
+    }
+
+    // 4) heurísticas por TAG (WS, ERROR, Base44 etc)
+    if(tagUpper.includes("WS")) return "WS";
+    if(tagUpper.includes("ERROR")) return "ERROR";
+    if(tagUpper.includes("BASE44")) return "Base44";
+
+    // 5) tenta achar palavras-chave na linha
+    const s = String(line||"");
+    if(s.includes("connected")) return "WS_CONNECTED";
+    if(s.includes("close")) return "WS_CLOSE";
+
+    return "";
+  }
+
   function parseLogLinesToEntries(text){
     const lines = String(text || "").split("\n").filter(l => l.trim().length);
     return lines.map(line => {
@@ -637,14 +673,25 @@
       const serial = snMatch ? snMatch[1] : "";
 
       const actionMatch = line.match(/action=([A-Za-z0-9_]+)/);
-      const action = actionMatch ? actionMatch[1] : "";
+      let action = actionMatch ? actionMatch[1] : "";
+
+      // Alguns logs vêm como: "CALL TriggerMessage" (sem action=)
+      if(!action){
+        const callActionMatch = line.match(/\bCALL\s+([A-Za-z0-9_]+)/);
+        if(callActionMatch) action = callActionMatch[1];
+      }
+
+      // Alguns CALLRESULT vêm como: "for=TriggerMessage"
+      const forMatch = line.match(/\bfor=([A-Za-z0-9_]+)/);
+      const forAction = forMatch ? forMatch[1] : "";
 
       const json = tryParseJsonFromLine(line);
       const time = extractIsoTime(line);
       const path = extractPath(line);
       const dir = directionFromTag(tag);
 
-      return { raw: line, tag, serial, action, json, time, path, dir };
+      const event = inferEvent(line, tag, action, json, forAction);
+      return { raw: line, tag, serial, action, event, json, time, path, dir };
     });
   }
 
@@ -665,7 +712,7 @@
     // extrai eventos únicos (action + tags relevantes)
     const set = new Set();
     for(const e of logEntriesCache){
-      if(e.action) set.add(e.action);
+      if(e.event) set.add(e.event);
       // se quiser filtrar também por tags (WS, ERROR), descomente:
       // if(e.tag) set.add(e.tag);
     }
@@ -707,7 +754,7 @@
 
       // evento (action)
       if(logFilters.event && logFilters.event !== "all"){
-        if(String(e.action || "") !== String(logFilters.event)) return false;
+        if(String(e.event || "") !== String(logFilters.event)) return false;
       }
 
       // caminho (substring, case-sensitive por padrão)
@@ -743,7 +790,7 @@
               <strong>${safeHtml(e.tag)}</strong>
             </span>
             ${e.serial ? `<span class="logSerial">${safeHtml(e.serial)}</span>` : ``}
-            ${e.action ? `<span class="logAction">• ${safeHtml(e.action)}</span>` : ``}
+            ${e.event ? `<span class="logAction">• ${safeHtml(e.event)}</span>` : ``}
           </div>
           <div class="muted small">${safeHtml(timeLabel)}</div>
         </div>
