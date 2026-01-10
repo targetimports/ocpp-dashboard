@@ -335,15 +335,13 @@
 // =========================
 // TriggerMessage — OCPP 1.6J (OFICIAL)
 // =========================
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"MeterValues", connectorId:1 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"Heartbeat", connectorId:0 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"BootNotification", connectorId:0 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StartTransaction", connectorId:1 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StopTransaction", connectorId:1 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"Authorize", connectorId:0 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"DiagnosticsStatusNotification", connectorId:0 } },
-{ group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"FirmwareStatusNotification", connectorId:0 } },
+{ group:"Trigger", action:"StatusNotification", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
+{ group:"Trigger", action:"MeterValues", tpl:{ requestedMessage:"MeterValues", connectorId:1 } },
+{ group:"Trigger", action:"Heartbeat", tpl:{ requestedMessage:"Heartbeat", connectorId:0 } },
+{ group:"Trigger", action:"BootNotification", tpl:{ requestedMessage:"BootNotification", connectorId:0 } },
+
+{ group:"Trigger", action:"DiagnosticsStatusNotification", tpl:{ requestedMessage:"DiagnosticsStatusNotification", connectorId:0 } },
+{ group:"Trigger", action:"FirmwareStatusNotification", tpl:{ requestedMessage:"FirmwareStatusNotification", connectorId:0 } },
 
     { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
     { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
