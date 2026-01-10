@@ -72,7 +72,7 @@
 
         .controls {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
         }
 
@@ -559,16 +559,21 @@
             word-wrap: break-word;
         }
 
-        /* Controls */
+        /* Control Buttons */
         .control-btn {
-            padding: 0.5rem 1rem;
+            padding: 0.5rem;
             border-radius: var(--radius);
             border: none;
-            background-color: var(--ocpp-in);
+            background-color: var(--bg-tertiary);
             color: white;
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
         }
 
         .control-btn:hover {
@@ -579,6 +584,14 @@
             background-color: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
+        }
+
+        .control-btn.success {
+            background-color: var(--success) !important;
+        }
+
+        .control-btn.danger {
+            background-color: var(--danger) !important;
         }
 
         /* Scrollbar */
@@ -631,6 +644,16 @@
             .commands-panel {
                 grid-column: 1;
             }
+            
+            .controls {
+                gap: 0.25rem;
+            }
+            
+            .control-btn {
+                min-width: 32px;
+                height: 32px;
+                padding: 0.25rem;
+            }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -643,13 +666,20 @@
         </div>
         <div class="controls">
             <select id="pollInterval" class="filter-select">
-                <option value="1000">1 segundo</option>
-                <option value="2000" selected>2 segundos</option>
-                <option value="5000">5 segundos</option>
-                <option value="10000">10 segundos</option>
+                <option value="1000">1s</option>
+                <option value="2000" selected>2s</option>
+                <option value="5000">5s</option>
+                <option value="10000">10s</option>
             </select>
-            <button id="clearBtn" class="control-btn secondary">Limpar</button>
-            <button id="pauseBtn" class="control-btn secondary">Pausar</button>
+            <button id="autoScrollBtn" class="control-btn success" title="Scroll automático: LIGADO">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <button id="clearBtn" class="control-btn secondary" title="Limpar mensagens">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button id="pauseBtn" class="control-btn secondary" title="Pausar atualização">
+                <i class="fas fa-pause"></i>
+            </button>
         </div>
     </header>
 
@@ -810,8 +840,9 @@
         class OCPPDashboard {
             constructor() {
                 this.messages = [];
-                this.devices = new Set(['2222233333']); // Starting with one device
+                this.devices = new Set(['2222233333']);
                 this.isPaused = false;
+                this.autoScroll = true; // Controle de scroll automático
                 this.currentFilters = {
                     type: 'all',
                     serial: 'all',
@@ -852,11 +883,38 @@
                 });
 
                 // Control buttons
+                document.getElementById('autoScrollBtn').addEventListener('click', () => this.toggleAutoScroll());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearMessages());
                 document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
                 document.getElementById('pollInterval').addEventListener('change', (e) => {
                     this.updatePollInterval(parseInt(e.target.value));
                 });
+            }
+
+            toggleAutoScroll() {
+                this.autoScroll = !this.autoScroll;
+                const btn = document.getElementById('autoScrollBtn');
+                
+                if (this.autoScroll) {
+                    btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                    btn.title = 'Scroll automático: LIGADO';
+                    btn.className = 'control-btn success';
+                    // Rola para baixo ao ativar
+                    this.scrollToBottom();
+                } else {
+                    btn.innerHTML = '<i class="fas fa-pause"></i>';
+                    btn.title = 'Scroll automático: DESLIGADO';
+                    btn.className = 'control-btn danger';
+                }
+            }
+
+            scrollToBottom() {
+                if (this.autoScroll) {
+                    const container = document.getElementById('messagesList');
+                    setTimeout(() => {
+                        container.scrollTop = container.scrollHeight;
+                    }, 10);
+                }
             }
 
             startPolling() {
@@ -929,6 +987,11 @@
                         this.updateDeviceList();
                     }
                     this.renderMessages();
+                    
+                    // Scroll automático para novas mensagens
+                    if (this.autoScroll) {
+                        setTimeout(() => this.scrollToBottom(), 50);
+                    }
                 }
             }
 
@@ -1021,6 +1084,10 @@
                 const container = document.getElementById('messagesList');
                 const filtered = this.getFilteredMessages();
                 
+                // Salva a posição atual do scroll
+                const scrollPosition = container.scrollTop;
+                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+                
                 container.innerHTML = '';
                 
                 filtered.forEach(msg => {
@@ -1029,6 +1096,16 @@
                 });
                 
                 this.updateFilteredCount(filtered.length);
+                
+                // Aplica scroll automático apenas se estava perto do final
+                if (this.autoScroll && isNearBottom) {
+                    setTimeout(() => {
+                        container.scrollTop = container.scrollHeight;
+                    }, 10);
+                } else {
+                    // Mantém a posição atual do scroll
+                    container.scrollTop = scrollPosition;
+                }
             }
 
             createMessageElement(msg) {
@@ -1191,7 +1268,13 @@
             togglePause() {
                 this.isPaused = !this.isPaused;
                 const btn = document.getElementById('pauseBtn');
-                btn.textContent = this.isPaused ? 'Continuar' : 'Pausar';
+                if (this.isPaused) {
+                    btn.innerHTML = '<i class="fas fa-play"></i>';
+                    btn.title = 'Continuar atualização';
+                } else {
+                    btn.innerHTML = '<i class="fas fa-pause"></i>';
+                    btn.title = 'Pausar atualização';
+                }
             }
 
             updatePollInterval(interval) {
