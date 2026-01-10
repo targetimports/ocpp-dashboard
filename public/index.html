@@ -664,52 +664,90 @@
   // =========================
   // Logs (sem cortar início no front) + modo "novos" com buffer
   // =========================
-  let logTimer = null;
-  let lastRendered = ""; // para modo "Somente novos"
-  let logBuffer = "";    // texto que o painel está exibindo (formatado via renderLogEntries)
+ 
+let logTimer = null;
+let logBuffer = "";                 // o que aparece no painel (acumulado)
+let seenLines = new Set();          // dedupe por linha
+const SEEN_MAX = 4000;              // limite pra não crescer infinito
+function resetLogState(){
+  logBuffer = "";
+  seenLines = new Set();
+  renderLogEntries(logBuffer);
+  loadLogs(true);
+}
 
-  function resetLogState(){
-    lastRendered = "";
-    logBuffer = "";
-    loadLogs(true);
+function clearLogsBox(){
+  logBuffer = "";
+  seenLines = new Set();
+  document.getElementById("logsBox").innerHTML = "";
+}
+
+function trimSeen(){
+  // mantém o Set "curto" (remove as mais antigas)
+  if (seenLines.size <= SEEN_MAX) return;
+  const arr = Array.from(seenLines);
+  const cut = arr.length - SEEN_MAX;
+  for (let i = 0; i < cut; i++) seenLines.delete(arr[i]);
+}
+
+async function loadLogs(force){
+  const t = document.getElementById("logType").value;
+  let j;
+
+  try{
+    const r = await fetch(`/api/logs/${t}`);
+    j = await r.json();
+  }catch(e){
+    return;
   }
+  if (!j?.ok) return;
 
-  function setLogPoll(){
-    if (logTimer) clearInterval(logTimer);
-    const sec = Number(document.getElementById("logPollSec").value || "2");
-    loadLogs(false);
-    logTimer = setInterval(() => loadLogs(false), sec * 1000);
-  }
+  const current = String(j.log || "");
+  const mode = document.getElementById("logMode").value;
 
-  function clearLogsBox(){
-    document.getElementById("logsBox").innerHTML = "";
-    lastRendered = "";
-    logBuffer = "";
-  }
+  // linhas atuais do tail
+  const lines = current.split("\n").map(s => s.replace(/\r$/, "")).filter(l => l.trim().length);
 
-  async function loadLogs(force){
-    const t = document.getElementById("logType").value;
-    let j;
-    try{
-      const r = await fetch(`/api/logs/${t}`);
-      j = await r.json();
-    }catch(e){
-      return;
+  if (mode === "full"){
+    // FULL = mostra exatamente o tail atual (sem acumular) + reinicia dedupe
+    if (force){
+      seenLines = new Set(lines);
+      trimSeen();
+    } else {
+      // atualiza "seen" pra evitar duplicar se trocar pra "new" depois
+      for (const ln of lines) seenLines.add(ln);
+      trimSeen();
     }
-    if (!j?.ok) return;
 
-    const current = String(j.log || "");
-    const mode = document.getElementById("logMode").value;
+    logBuffer = lines.join("\n");
+    renderLogEntries(logBuffer);
+    return;
+  }
 
-    if (mode === "full"){
-      // ✅ sempre renderiza o retorno completo
-      if (force || lastRendered !== current){
-        logBuffer = current;
-        renderLogEntries(logBuffer);
-      }
-      lastRendered = current;
-      return;
+  // NEW = adiciona SOMENTE linhas novas (dedupe)
+  let newLines = [];
+  for (const ln of lines){
+    if (!seenLines.has(ln)){
+      newLines.push(ln);
+      seenLines.add(ln);
     }
+  }
+  trimSeen();
+
+  if (force && !logBuffer){
+    // primeira carga no modo new
+    logBuffer = lines.join("\n");
+    renderLogEntries(logBuffer);
+    return;
+  }
+
+  if (newLines.length){
+    // ✅ mais novas em cima
+    logBuffer = (newLines.join("\n") + "\n" + logBuffer).trim();
+    renderLogEntries(logBuffer);
+  }
+}
+
 
     // mode === "new"
     if (!lastRendered){
