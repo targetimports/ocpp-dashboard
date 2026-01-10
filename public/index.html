@@ -648,7 +648,7 @@
     });
   }
 
-  let lastFullRender = "";
+  let lastFullRenderKey = "";
   // =========================
   // Filtros de LOGS (caminho / evento / direção IN/OUT)
   // =========================
@@ -686,6 +686,8 @@
 
   function applyLogFilters(){
     readFiltersFromUI();
+    // força re-render mesmo no modo FULL (o tail pode estar igual)
+    lastFullRenderKey = "";
     renderLogEntries(logBuffer, document.getElementById("logMode").value);
   }
 
@@ -717,8 +719,9 @@
     });
 
     if(mode === "full"){
-      if(text === lastFullRender) return;
-      lastFullRender = text;
+      const key = text + "||" + JSON.stringify(logFilters || {});
+      if(key === lastFullRenderKey) return;
+      lastFullRenderKey = key;
     }
 
     let html = `<div class="logWrap">`;
@@ -776,7 +779,7 @@
   function resetLogState(){
     logBuffer = "";
     seenLines = new Set();
-    lastFullRender = "";
+    lastFullRenderKey = "";
     renderLogEntries("", document.getElementById("logMode").value);
     loadLogs(true);
   }
@@ -784,7 +787,7 @@
   function clearLogsBox(){
     logBuffer = "";
     seenLines = new Set();
-    lastFullRender = "";
+    lastFullRenderKey = "";
     document.getElementById("logsBox").innerHTML = "";
   }
 
