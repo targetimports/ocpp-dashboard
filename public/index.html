@@ -660,7 +660,12 @@
     html += `</div>`;
     box.innerHTML = html || "";
   }
-
+  function setLogPoll(){
+    if (logTimer) clearInterval(logTimer);
+    const sec = Number(document.getElementById("logPollSec").value || "2");
+    loadLogs(false);
+    logTimer = setInterval(() => loadLogs(false), sec * 1000);
+  }
   // =========================
   // Logs (sem cortar início no front) + modo "novos" com buffer
   // =========================
