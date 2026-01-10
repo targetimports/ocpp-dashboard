@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>OCPP Dashboard</title>
+
   <style>
     :root{
       --bg:#0b0f14; --panel:#0f1620; --panel2:#0c121a;
@@ -96,6 +97,52 @@
     .kv{display:flex;gap:10px;flex-wrap:wrap}
     .kv .badge{background:rgba(255,255,255,.02)}
     .small{font-size:11px}
+
+    /* ============ LOG FORMATADO (cards) ============ */
+    .logWrap { display:flex; flex-direction:column; gap:10px; }
+    .logEntry{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      border-radius: 12px;
+      padding:10px 12px;
+    }
+    .logTop{display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap}
+    .logTag{
+      display:inline-flex; gap:8px; align-items:center;
+      font-size:12px; padding:4px 10px; border-radius:999px;
+      border:1px solid var(--line2);
+      background: rgba(255,255,255,.02);
+    }
+    .logTag .d{width:8px;height:8px;border-radius:50%}
+    .logSerial{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:650}
+    .logAction{color:var(--muted); font-size:12px}
+    .logMsg{margin-top:8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap}
+    .logJson{
+      margin-top:8px;
+      background: var(--panel2);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      white-space:pre-wrap;
+      overflow:auto;
+    }
+    .meterGrid{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap:8px;
+    }
+    @media (max-width:900px){ .meterGrid{grid-template-columns:1fr 1fr} }
+    .meterItem{
+      background: rgba(255,255,255,.02);
+      border:1px solid var(--line);
+      border-radius: 12px;
+      padding:8px 10px;
+    }
+    .meterItem .k{color:var(--muted); font-size:11px}
+    .meterItem .v{font-weight:700; font-size:14px}
   </style>
 </head>
 
@@ -239,7 +286,8 @@
         Se o server retorna “tail”, o início muda. No modo <b>Completo</b> o painel sempre renderiza o retorno inteiro (não corta).
       </div>
 
-      <pre id="logsBox" class="mono" style="height:440px"></pre>
+      <!-- era <pre> ... agora é div para render HTML -->
+      <div id="logsBox" class="mono" style="height:440px"></div>
     </div>
 
   </div>
@@ -248,9 +296,7 @@
 <script>
   // =========================
   // Templates OCPP 1.6J (CS -> CP)
-  // Perfis: Core, Firmware, Local Auth, Reservation, Smart Charging, Remote Trigger
   // =========================
-  // Lista baseada nos perfis suportados e ações comuns do OCPP 1.6J. :contentReference[oaicite:1]{index=1}
   const COMMANDS = [
     // Core
     { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
@@ -489,13 +535,142 @@
   }
 
   // =========================
-  // Logs (sem cortar início)
+  // Log parsing/formatting
+  // =========================
+  function colorByType(tag){
+    const t = (tag || "").toUpperCase();
+    if (t.includes("OCPP IN")) return "var(--pri)";
+    if (t.includes("OCPP OUT")) return "#06b6d4";
+    if (t.includes("METER")) return "var(--ok)";
+    if (t.includes("ERROR")) return "var(--bad)";
+    if (t.includes("WS")) return "var(--warn)";
+    return "var(--muted)";
+  }
+
+  function safeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function tryParseJsonFromLine(line){
+    const m = line.match(/\{[\s\S]*\}$/);
+    if(!m) return null;
+    try { return JSON.parse(m[0]); } catch { return null; }
+  }
+
+  function summarizeMeter(json){
+    const points = Array.isArray(json?.points) ? json.points : [];
+    const pick = (meas) => points.find(p => p.measurand === meas);
+
+    const energy = pick("Energy.Active.Import.Register");
+    const power  = pick("Power.Active.Import");
+    const soc    = pick("SoC");
+    const curr   = pick("Current.Import");
+    const volt   = pick("Voltage");
+    const temp   = pick("Temperature");
+
+    const fmt = (p) => p ? `${p.value} ${p.unit || ""}`.trim() : "—";
+
+    let energyText = "—";
+    if (energy?.value != null) {
+      const wh = Number(energy.value);
+      if (!Number.isNaN(wh)) {
+        const kwh = wh / 1000;
+        energyText = `${wh} Wh  (${kwh.toFixed(3)} kWh)`;
+      } else {
+        energyText = fmt(energy);
+      }
+    }
+
+    return {
+      "Energia total": energyText,
+      "Potência": fmt(power),
+      "SoC": fmt(soc),
+      "Corrente": fmt(curr),
+      "Tensão": fmt(volt),
+      "Temperatura": fmt(temp),
+    };
+  }
+
+  function parseLogLinesToEntries(text){
+    const lines = String(text || "").split("\n").filter(l => l.trim().length);
+    return lines.map(line => {
+      const tagMatch = line.match(/^\[([^\]]+)\]/);
+      const tag = tagMatch ? tagMatch[1] : "LOG";
+
+      const snMatch = line.match(/^\[[^\]]+\]\s+([0-9]{3,})/);
+      const serial = snMatch ? snMatch[1] : "";
+
+      const actionMatch = line.match(/action=([A-Za-z0-9_]+)/);
+      const action = actionMatch ? actionMatch[1] : "";
+
+      const json = tryParseJsonFromLine(line);
+
+      return { raw: line, tag, serial, action, json };
+    });
+  }
+
+  function renderLogEntries(text){
+    const box = document.getElementById("logsBox");
+    const entries = parseLogLinesToEntries(text);
+
+    let html = `<div class="logWrap">`;
+
+    for (const e of entries){
+      const c = colorByType(e.tag);
+
+      // conteúdo principal sem JSON duplicado
+      let main = e.raw;
+      const jsonMatch = main.match(/\{[\s\S]*\}$/);
+      if (jsonMatch) main = main.slice(0, jsonMatch.index).trim();
+
+      html += `<div class="logEntry">
+        <div class="logTop">
+          <div class="row" style="gap:8px">
+            <span class="logTag">
+              <span class="d" style="background:${c}"></span>
+              <strong>${safeHtml(e.tag)}</strong>
+            </span>
+            ${e.serial ? `<span class="logSerial">${safeHtml(e.serial)}</span>` : ``}
+            ${e.action ? `<span class="logAction">• ${safeHtml(e.action)}</span>` : ``}
+          </div>
+          <div class="muted small">${new Date().toLocaleTimeString()}</div>
+        </div>
+
+        <div class="logMsg">${safeHtml(main)}</div>
+      `;
+
+      if (String(e.tag).toUpperCase().includes("METER") && e.json?.points){
+        const sum = summarizeMeter(e.json);
+        html += `<div class="meterGrid">`;
+        for (const [k,v] of Object.entries(sum)){
+          html += `<div class="meterItem"><div class="k">${safeHtml(k)}</div><div class="v">${safeHtml(v)}</div></div>`;
+        }
+        html += `</div>`;
+      }
+
+      if (e.json){
+        html += `<div class="logJson">${safeHtml(JSON.stringify(e.json, null, 2))}</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    box.innerHTML = html || "";
+  }
+
+  // =========================
+  // Logs (sem cortar início no front) + modo "novos" com buffer
   // =========================
   let logTimer = null;
   let lastRendered = ""; // para modo "Somente novos"
+  let logBuffer = "";    // texto que o painel está exibindo (formatado via renderLogEntries)
 
   function resetLogState(){
     lastRendered = "";
+    logBuffer = "";
     loadLogs(true);
   }
 
@@ -507,8 +682,9 @@
   }
 
   function clearLogsBox(){
-    document.getElementById("logsBox").textContent = "";
+    document.getElementById("logsBox").innerHTML = "";
     lastRendered = "";
+    logBuffer = "";
   }
 
   async function loadLogs(force){
@@ -522,25 +698,23 @@
     }
     if (!j?.ok) return;
 
-    const box = document.getElementById("logsBox");
     const current = String(j.log || "");
-
     const mode = document.getElementById("logMode").value;
 
     if (mode === "full"){
-      // ✅ sempre renderiza o retorno completo (não corta início)
-      if (force || box.textContent !== current){
-        box.textContent = current;
+      // ✅ sempre renderiza o retorno completo
+      if (force || lastRendered !== current){
+        logBuffer = current;
+        renderLogEntries(logBuffer);
       }
       lastRendered = current;
       return;
     }
 
     // mode === "new"
-    // ✅ adiciona apenas o que é novo, mas sem assumir que tail mantém o começo
-    // estratégia: se o retorno atual NÃO contém o lastRendered, resetamos e mostramos tudo como novo
     if (!lastRendered){
-      box.textContent = current;
+      logBuffer = current;
+      renderLogEntries(logBuffer);
       lastRendered = current;
       return;
     }
@@ -548,13 +722,15 @@
     if (current.includes(lastRendered)){
       const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
       if (newPart){
-        box.textContent = (newPart + "\n\n" + box.textContent).trim();
-        
+        // coloca o novo por CIMA no buffer (mais recente em cima)
+        logBuffer = (newPart + "\n" + logBuffer).trim();
+        renderLogEntries(logBuffer);
       }
       lastRendered = current;
     }else{
-      // tail “andou” e o início mudou: evita bug de corte
-      box.textContent = current + "\n\n" + box.textContent;
+      // tail “andou”: evita bug de corte
+      logBuffer = (current + "\n" + logBuffer).trim();
+      renderLogEntries(logBuffer);
       lastRendered = current;
     }
   }
