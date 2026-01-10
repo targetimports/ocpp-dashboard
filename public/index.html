@@ -1,1492 +1,583 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCPP Dashboard - Monitor e Controle</title>
-    <style>
-        :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --bg-command: #1a1f2e;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --border-color: #475569;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --ocpp-in: #8b5cf6;
-            --ocpp-out: #06b6d4;
-            --meter: #10b981;
-            --status: #f59e0b;
-            --txn: #3b82f6;
-            --command: #ec4899;
-            --radius: 8px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.5;
-        }
-
-        /* Header */
-        header {
-            background-color: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .logo h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .logo-badge {
-            background: linear-gradient(135deg, var(--ocpp-in), var(--ocpp-out));
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .controls {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        /* Main Layout */
-        .container {
-            display: grid;
-            grid-template-columns: 300px 1fr 400px;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            background-color: var(--bg-secondary);
-            border-right: 1px solid var(--border-color);
-            padding: 1.5rem;
-            overflow-y: auto;
-        }
-
-        .stats-grid {
-            display: grid;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background-color: var(--bg-tertiary);
-            border-radius: var(--radius);
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .stat-card h3 {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .serial-list {
-            margin-top: 2rem;
-        }
-
-        .serial-item {
-            background-color: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .serial-item:hover {
-            border-color: var(--ocpp-in);
-            transform: translateX(4px);
-        }
-
-        .serial-item.active {
-            border-color: var(--ocpp-in);
-            background-color: rgba(139, 92, 246, 0.1);
-        }
-
-        .serial-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .serial-id {
-            font-weight: 600;
-            font-family: 'Courier New', monospace;
-        }
-
-        .serial-status {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--success);
-        }
-
-        .serial-status.offline {
-            background-color: var(--danger);
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 1.5rem;
-            overflow-y: auto;
-        }
-
-        .filters {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.875rem;
-        }
-
-        .filter-btn:hover {
-            border-color: var(--ocpp-in);
-        }
-
-        .filter-btn.active {
-            background-color: var(--ocpp-in);
-            border-color: var(--ocpp-in);
-            color: white;
-        }
-
-        .filter-select {
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            min-width: 150px;
-        }
-
-        /* Messages Container */
-        .messages-container {
-            background-color: var(--bg-secondary);
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-            height: calc(1500px);
-        }
-
-        .messages-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .messages-header h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .messages-list {
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            padding: 1rem;
-        }
-
-        /* Message Items */
-        .message-item {
-            background-color: var(--bg-tertiary);
-            border-radius: var(--radius);
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            border-left: 4px solid var(--border-color);
-            transition: all 0.2s;
-        }
-
-        .message-item:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .message-item[data-type="OCPP IN"] {
-            border-left-color: var(--ocpp-in);
-        }
-
-        .message-item[data-type="OCPP OUT"] {
-            border-left-color: var(--ocpp-out);
-        }
-
-        .message-item[data-type="METER"] {
-            border-left-color: var(--meter);
-        }
-
-        .message-item[data-type="STATUS"] {
-            border-left-color: var(--status);
-        }
-
-        .message-item[data-type="TXN"] {
-            border-left-color: var(--txn);
-        }
-
-        .message-item[data-type="WS"] {
-            border-left-color: var(--info);
-        }
-
-        .message-item[data-type="COMMAND"] {
-            border-left-color: var(--command);
-        }
-
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .message-type {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .message-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .message-badge.ocpp-in {
-            background-color: rgba(139, 92, 246, 0.2);
-            color: var(--ocpp-in);
-        }
-
-        .message-badge.ocpp-out {
-            background-color: rgba(6, 182, 212, 0.2);
-            color: var(--ocpp-out);
-        }
-
-        .message-badge.meter {
-            background-color: rgba(16, 185, 129, 0.2);
-            color: var(--meter);
-        }
-
-        .message-badge.status {
-            background-color: rgba(245, 158, 11, 0.2);
-            color: var(--status);
-        }
-
-        .message-badge.txn {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: var(--txn);
-        }
-
-        .message-badge.ws {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: var(--info);
-        }
-
-        .message-badge.command {
-            background-color: rgba(236, 72, 153, 0.2);
-            color: var(--command);
-        }
-
-        .message-time {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-        }
-
-        .message-content {
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
-            background-color: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            border-radius: var(--radius);
-            margin-bottom: 0.75rem;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        /* Commands Panel */
-        .commands-panel {
-            background-color: var(--bg-command);
-            border-left: 1px solid var(--border-color);
-            padding: 1.5rem;
-            overflow-y: auto;
-        }
-
-        .commands-header {
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .commands-header h2 {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .command-section {
-            margin-bottom: 2rem;
-        }
-
-        .command-section h3 {
-            font-size: 1rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .command-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .command-btn {
-            padding: 1rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .command-btn:hover {
-            border-color: var(--command);
-            background-color: rgba(236, 72, 153, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .command-btn i {
-            font-size: 1.5rem;
-            color: var(--command);
-        }
-
-        .command-btn span {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .quick-btn {
-            padding: 0.75rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .quick-btn:hover {
-            border-color: var(--success);
-            background-color: rgba(16, 185, 129, 0.1);
-        }
-
-        .quick-btn.danger:hover {
-            border-color: var(--danger);
-            background-color: rgba(239, 68, 68, 0.1);
-        }
-
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.875rem;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--command);
-            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
-        }
-
-        .textarea {
-            min-height: 120px;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        /* Send Button */
-        .send-btn {
-            width: 100%;
-            padding: 1rem;
-            border-radius: var(--radius);
-            border: none;
-            background: linear-gradient(135deg, var(--command), #d946ef);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 1rem;
-        }
-
-        .send-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Response Box */
-        .response-box {
-            margin-top: 1.5rem;
-            background-color: var(--bg-tertiary);
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-        }
-
-        .response-box h3 {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .response-content {
-            font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
-            background-color: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            border-radius: var(--radius);
-            min-height: 100px;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        /* Control Buttons */
-        .control-btn {
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            border: none;
-            background-color: var(--bg-tertiary);
-            color: white;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 36px;
-            height: 36px;
-        }
-
-        .control-btn:hover {
-            opacity: 0.9;
-        }
-
-        .control-btn.secondary {
-            background-color: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .control-btn.success {
-            background-color: var(--success) !important;
-        }
-
-        .control-btn.danger {
-            background-color: var(--danger) !important;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
-
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .container {
-                grid-template-columns: 250px 1fr 350px;
-            }
-        }
-
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 1fr 1fr;
-            }
-            
-            .commands-panel {
-                grid-column: span 2;
-                border-left: none;
-                border-top: 1px solid var(--border-color);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                display: none;
-            }
-            
-            .commands-panel {
-                grid-column: 1;
-            }
-            
-            .controls {
-                gap: 0.25rem;
-            }
-            
-            .control-btn {
-                min-width: 32px;
-                height: 32px;
-                padding: 0.25rem;
-            }
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OCPP Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#0f1620; --panel2:#0c121a;
+      --line:#1f2a37; --line2:#2b3a4c;
+      --txt:#e6edf3; --muted:#9aa4b2;
+      --ok:#22c55e; --bad:#ef4444; --pri:#8b5cf6; --warn:#f59e0b;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Arial}
+    header{
+      position:sticky;top:0;z-index:5;
+      padding:14px 18px;border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(11,15,20,0.98), rgba(11,15,20,0.92));
+      backdrop-filter: blur(6px);
+      display:flex;align-items:center;justify-content:space-between;gap:12px
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand b{font-size:18px}
+    .brand span{color:var(--muted);font-size:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .wrap{padding:16px 18px;max-width:1300px;margin:auto}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr 1.25fr 1.6fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    }
+    .card h3{margin:0 0 10px 0;font-size:14px;letter-spacing:.2px}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{
+      padding:5px 10px;border-radius:999px;border:1px solid var(--line2);
+      font-size:12px;display:inline-flex;gap:8px;align-items:center
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}
+    .ok .dot{background:var(--ok)}
+    .bad .dot{background:var(--bad)}
+    .warn .dot{background:var(--warn)}
+    input,select,button,textarea{
+      background:var(--panel2);
+      color:var(--txt);
+      border:1px solid var(--line2);
+      border-radius:12px;
+      padding:10px 10px;
+      outline:none;
+    }
+    button{cursor:pointer}
+    button:hover{border-color:var(--pri)}
+    button.primary{border-color:rgba(139,92,246,.65)}
+    button.primary:hover{border-color:var(--pri)}
+    button.ghost{background:transparent}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:520px){ .split{grid-template-columns:1fr} }
+
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
+    th{font-size:12px;color:var(--muted);font-weight:600}
+    td{font-size:13px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    .btns button{padding:8px 10px;border-radius:10px}
+
+    .mono{
+      white-space:pre-wrap;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      max-height:420px;
+      overflow:auto;
+    }
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:6px 0 10px}
+    .toolbar .left,.toolbar .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:3px 8px;border-radius:999px;border:1px solid var(--line2);
+      font-size:11px;color:var(--muted)
+    }
+    .badge strong{color:var(--txt);font-weight:650}
+    .kv{display:flex;gap:10px;flex-wrap:wrap}
+    .kv .badge{background:rgba(255,255,255,.02)}
+    .small{font-size:11px}
+  </style>
 </head>
+
 <body>
-    <header>
-        <div class="logo">
-            <h1>OCPP Dashboard</h1>
-            <div class="logo-badge">OCPP 1.6J</div>
-        </div>
-        <div class="controls">
-            <select id="pollInterval" class="filter-select">
-                <option value="1000">1s</option>
-                <option value="2000" selected>2s</option>
-                <option value="5000">5s</option>
-                <option value="10000">10s</option>
-            </select>
-            <button id="autoScrollBtn" class="control-btn success" title="Scroll automático: LIGADO">
-                <i class="fas fa-chevron-down"></i>
-            </button>
-            <button id="clearBtn" class="control-btn secondary" title="Limpar mensagens">
-                <i class="fas fa-trash"></i>
-            </button>
-            <button id="pauseBtn" class="control-btn secondary" title="Pausar atualização">
-                <i class="fas fa-pause"></i>
-            </button>
-        </div>
-    </header>
+<header>
+  <div class="brand">
+    <b>OCPP Dashboard</b>
+    <span>Online • comandos • logs • debug rápido</span>
+  </div>
 
-    <div class="container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Mensagens</h3>
-                    <div class="stat-value" id="totalMessages">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Dispositivos</h3>
-                    <div class="stat-value" id="totalDevices">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Última Atualização</h3>
-                    <div class="stat-value" id="lastUpdate">-</div>
-                </div>
-            </div>
+  <div class="row">
+    <span id="statusPill" class="pill bad"><span class="dot"></span><span id="statusText">desconhecido</span></span>
+    <button class="ghost" onclick="refreshClients()">Atualizar</button>
+  </div>
+</header>
 
-            <div class="serial-list">
-                <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Dispositivos Conectados</h3>
-                <div id="serialList">
-                    <!-- Serial items will be added here -->
-                </div>
-            </div>
-        </aside>
+<div class="wrap">
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="filters">
-                <div class="filter-buttons">
-                    <button class="filter-btn active" data-filter="all">Todos</button>
-                    <button class="filter-btn" data-filter="OCPP IN">OCPP IN</button>
-                    <button class="filter-btn" data-filter="OCPP OUT">OCPP OUT</button>
-                    <button class="filter-btn" data-filter="METER">Meter Values</button>
-                    <button class="filter-btn" data-filter="STATUS">Status</button>
-                    <button class="filter-btn" data-filter="TXN">Transactions</button>
-                    <button class="filter-btn" data-filter="WS">WebSocket</button>
-                    <button class="filter-btn" data-filter="COMMAND">Comandos</button>
-                </div>
-                
-                <select id="serialFilter" class="filter-select">
-                    <option value="all">Todos os Seriais</option>
-                    <!-- Serial options will be added here -->
-                </select>
-                
-                <select id="actionFilter" class="filter-select">
-                    <option value="all">Todas as Ações</option>
-                    <option value="Heartbeat">Heartbeat</option>
-                    <option value="StatusNotification">Status</option>
-                    <option value="MeterValues">Meter Values</option>
-                    <option value="StartTransaction">Start Transaction</option>
-                    <option value="StopTransaction">Stop Transaction</option>
-                    <option value="BootNotification">Boot</option>
-                    <option value="TriggerMessage">Trigger Message</option>
-                    <option value="Reset">Reset</option>
-                    <option value="RemoteStartTransaction">Remote Start</option>
-                    <option value="RemoteStopTransaction">Remote Stop</option>
-                </select>
-            </div>
+  <div class="card">
+    <div class="toolbar">
+      <div class="left">
+        <h3 style="margin:0">Status</h3>
+        <span class="badge">Gateway: <strong id="gw">(carregando…)</strong></span>
+        <span class="badge">Online: <strong id="onlineCount">0</strong></span>
+      </div>
+      <div class="right">
+        <label class="badge">
+          Poll (s)
+          <select id="pollSec" onchange="setPoll()" style="padding:6px 8px">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+          </select>
+        </label>
+        <label class="badge">
+          Buscar
+          <input id="search" oninput="renderClients()" placeholder="serial…" style="padding:6px 10px; width:170px"/>
+        </label>
+      </div>
+    </div>
+    <div class="muted">O painel considera “online” o que o gateway expõe em <code>/ocpp/clients</code>. (Heartbeat deve atualizar o gateway.)</div>
+  </div>
 
-            <div class="messages-container">
-                <div class="messages-header">
-                    <h2>Mensagens em Tempo Real</h2>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <span id="filteredCount" style="color: var(--text-muted); font-size: 0.875rem;">Mostrando 0 mensagens</span>
-                    </div>
-                </div>
-                <div class="messages-list" id="messagesList">
-                    <!-- Messages will be added here -->
-                </div>
-            </div>
-        </main>
+  <div class="grid">
 
-        <!-- Commands Panel -->
-        <aside class="commands-panel">
-            <div class="commands-header">
-                <h2><i class="fas fa-terminal"></i> Enviar Comandos</h2>
-            </div>
-
-            <div class="quick-actions">
-                <button class="quick-btn" onclick="commandPanel.triggerStatus()">
-                    <i class="fas fa-sync-alt"></i> Status
-                </button>
-                <button class="quick-btn" onclick="commandPanel.triggerMeter()">
-                    <i class="fas fa-tachometer-alt"></i> Meter Values
-                </button>
-                <button class="quick-btn" onclick="commandPanel.softReset()">
-                    <i class="fas fa-redo"></i> Soft Reset
-                </button>
-                <button class="quick-btn danger" onclick="commandPanel.hardReset()">
-                    <i class="fas fa-power-off"></i> Hard Reset
-                </button>
-            </div>
-
-            <div class="form-group">
-                <label for="targetSerial"><i class="fas fa-microchip"></i> Serial do Dispositivo</label>
-                <input type="text" id="targetSerial" class="form-input" placeholder="Ex: 2222233333" value="2222233333">
-            </div>
-
-            <div class="form-group">
-                <label for="commandAction"><i class="fas fa-bolt"></i> Ação OCPP</label>
-                <select id="commandAction" class="form-input" onchange="commandPanel.loadTemplate()">
-                    <option value="">Selecione uma ação...</option>
-                    <optgroup label="Core">
-                        <option value="RemoteStartTransaction">RemoteStartTransaction</option>
-                        <option value="RemoteStopTransaction">RemoteStopTransaction</option>
-                        <option value="UnlockConnector">UnlockConnector</option>
-                        <option value="Reset">Reset</option>
-                        <option value="ChangeAvailability">ChangeAvailability</option>
-                        <option value="GetConfiguration">GetConfiguration</option>
-                        <option value="ChangeConfiguration">ChangeConfiguration</option>
-                    </optgroup>
-                    <optgroup label="Trigger">
-                        <option value="TriggerMessage">TriggerMessage</option>
-                    </optgroup>
-                    <optgroup label="Firmware">
-                        <option value="GetDiagnostics">GetDiagnostics</option>
-                        <option value="UpdateFirmware">UpdateFirmware</option>
-                    </optgroup>
-                    <optgroup label="Reservation">
-                        <option value="ReserveNow">ReserveNow</option>
-                        <option value="CancelReservation">CancelReservation</option>
-                    </optgroup>
-                    <optgroup label="Local Auth">
-                        <option value="GetLocalListVersion">GetLocalListVersion</option>
-                        <option value="SendLocalList">SendLocalList</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="commandPayload"><i class="fas fa-code"></i> Payload JSON</label>
-                <textarea id="commandPayload" class="form-input textarea" placeholder="{}"></textarea>
-            </div>
-
-            <button id="sendCommandBtn" class="send-btn" onclick="commandPanel.sendCommand()">
-                <i class="fas fa-paper-plane"></i> Enviar Comando
-            </button>
-
-            <div class="response-box">
-                <h3>
-                    <span>Resposta</span>
-                    <button onclick="commandPanel.copyResponse()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </h3>
-                <div id="commandResponse" class="response-content">
-                    Aguardando comando...
-                </div>
-            </div>
-        </aside>
+    <!-- COL 1: ONLINE -->
+    <div class="card">
+      <h3>Carregadores online</h3>
+      <div class="muted" style="margin-bottom:10px">Clique em um serial para pré-preencher o comando.</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:35%">Serial</th>
+            <th>Ações rápidas</th>
+          </tr>
+        </thead>
+        <tbody id="clientsBody">
+          <tr><td colspan="2" class="muted">Carregando…</td></tr>
+        </tbody>
+      </table>
     </div>
 
-    <script>
-        class OCPPDashboard {
-            constructor() {
-                this.messages = [];
-                this.devices = new Set(['2222233333']);
-                this.isPaused = false;
-                this.autoScroll = false; // Controle de scroll automático
-                this.currentFilters = {
-                    type: 'all',
-                    serial: 'all',
-                    action: 'all'
-                };
-                this.initialize();
-            }
+    <!-- COL 2: COMANDOS -->
+    <div class="card">
+      <h3>Enviar comando (CS → CP)</h3>
+      <div class="muted">Chama <code>/api/send</code> e repassa para o gateway.</div>
 
-            initialize() {
-                this.setupEventListeners();
-                this.startPolling();
-                this.updateStats();
-                this.updateDeviceList();
-                this.simulateInitialData();
-            }
+      <div class="split" style="margin-top:12px">
+        <input id="serial" placeholder="serialNumber (ex: 2222233333)"/>
+        <select id="action" onchange="applyTemplate()"></select>
+      </div>
 
-            setupEventListeners() {
-                // Filter buttons
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        this.currentFilters.type = btn.dataset.filter;
-                        this.filterMessages();
-                    });
-                });
+      <div class="toolbar" style="margin-top:10px">
+        <div class="left">
+          <span class="badge">Template: <strong id="tplName">—</strong></span>
+          <span class="badge">Dica: <span id="hint" class="small">Selecione a ação</span></span>
+        </div>
+        <div class="right">
+          <button class="ghost" onclick="applyTemplate()">Aplicar</button>
+          <button class="ghost" onclick="clearPayload()">Limpar</button>
+        </div>
+      </div>
 
-                // Serial filter
-                document.getElementById('serialFilter').addEventListener('change', (e) => {
-                    this.currentFilters.serial = e.target.value;
-                    this.filterMessages();
-                });
+      <textarea id="payload" rows="12" style="width:100%">{}</textarea>
 
-                // Action filter
-                document.getElementById('actionFilter').addEventListener('change', (e) => {
-                    this.currentFilters.action = e.target.value;
-                    this.filterMessages();
-                });
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <div class="row">
+          <button class="primary" onclick="sendCmd()">Enviar</button>
+          <button class="ghost" onclick="copyPayload()">Copiar payload</button>
+        </div>
+        <div class="muted small">Resposta abaixo</div>
+      </div>
 
-                // Control buttons
-                document.getElementById('autoScrollBtn').addEventListener('click', () => this.toggleAutoScroll());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearMessages());
-                document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
-                document.getElementById('pollInterval').addEventListener('change', (e) => {
-                    this.updatePollInterval(parseInt(e.target.value));
-                });
-            }
+      <div style="margin-top:12px">
+        <h3 style="margin:0 0 8px 0">Resposta</h3>
+        <pre id="resp" class="mono">{}</pre>
+      </div>
+    </div>
 
-   toggleAutoScroll() {
-    this.autoScroll = !this.autoScroll;
-    const btn = document.getElementById('autoScrollBtn');
-    const container = document.getElementById('messagesList');
-    
-    if (this.autoScroll) {
-        btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-        btn.title = 'Scroll automático: LIGADO';
-        btn.className = 'control-btn success';
-        // Só rola para baixo se o usuário já está perto do final
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-        if (isNearBottom) {
-            this.scrollToBottom();
+    <!-- COL 3: LOGS -->
+    <div class="card">
+      <h3>Logs</h3>
+
+      <div class="toolbar">
+        <div class="left">
+          <select id="logType">
+            <option value="gateway">Gateway OCPP</option>
+            <option value="gateway_err">Gateway Erros</option>
+            <option value="dashboard">Dashboard</option>
+            <option value="dashboard_err">Dashboard Erros</option>
+            <option value="nginx">Nginx error</option>
+            <option value="nginx_access">Nginx access</option>
+          </select>
+          <button onclick="loadLogs(true)">Carregar</button>
+        </div>
+
+        <div class="right">
+          <label class="badge">
+            Modo
+            <select id="logMode" onchange="resetLogState()" style="padding:6px 8px">
+              <option value="full" selected>Completo</option>
+              <option value="new">Somente novos</option>
+            </select>
+          </label>
+          <label class="badge">
+            Atualiza (s)
+            <select id="logPollSec" onchange="setLogPoll()" style="padding:6px 8px">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+            </select>
+          </label>
+          <button class="ghost" onclick="clearLogsBox()">Limpar tela</button>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-bottom:10px">
+        <span class="badge">💡 Dica</span>
+        Se o server retorna “tail”, o início muda. No modo <b>Completo</b> o painel sempre renderiza o retorno inteiro (não corta).
+      </div>
+
+      <pre id="logsBox" class="mono" style="height:440px"></pre>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // =========================
+  // Templates OCPP 1.6J (CS -> CP)
+  // Perfis: Core, Firmware, Local Auth, Reservation, Smart Charging, Remote Trigger
+  // =========================
+  // Lista baseada nos perfis suportados e ações comuns do OCPP 1.6J. :contentReference[oaicite:1]{index=1}
+  const COMMANDS = [
+    // Core
+    { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
+    { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
+    { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
+    { group:"Core", action:"Reset", tpl:{ type:"Soft" } }, // Soft | Hard
+    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } }, // Operative | Inoperative
+    { group:"Core", action:"ClearCache", tpl:{} },
+    { group:"Core", action:"GetConfiguration", tpl:{ key:[] } }, // [] => tudo
+    { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
+    { group:"Core", action:"DataTransfer", tpl:{ vendorId:"SeuVendor", messageId:"ping", data:"hello" } },
+
+    // Firmware Management
+    { group:"Firmware", action:"GetDiagnostics", tpl:{ location:"https://ocpptarget.cloud/diag", retries:1, retryInterval:60 } },
+    { group:"Firmware", action:"UpdateFirmware", tpl:{ location:"https://ocpptarget.cloud/fw.bin", retries:1, retryInterval:60, retrieveDate:new Date(Date.now()+5*60*1000).toISOString() } },
+
+    // Remote Trigger
+    { group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
+
+    // Reservation
+    { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
+    { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
+
+    // Local Auth List Management
+    { group:"LocalAuth", action:"GetLocalListVersion", tpl:{} },
+    { group:"LocalAuth", action:"SendLocalList", tpl:{
+      listVersion: 1,
+      updateType: "Full", // Full | Differential
+      localAuthorizationList: [
+        { idTag: "TARGET001", idTagInfo: { status: "Accepted" } }
+      ]
+    } },
+
+    // Smart Charging
+    { group:"SmartCharging", action:"ClearChargingProfile", tpl:{ id: null, connectorId: 0, chargingProfilePurpose: "TxProfile", stackLevel: 0 } },
+    { group:"SmartCharging", action:"GetCompositeSchedule", tpl:{ connectorId:1, duration:3600, chargingRateUnit:"A" } }, // "A" or "W"
+    { group:"SmartCharging", action:"SetChargingProfile", tpl:{
+      connectorId: 1,
+      csChargingProfiles: {
+        chargingProfileId: 1,
+        stackLevel: 0,
+        chargingProfilePurpose: "TxProfile",
+        chargingProfileKind: "Absolute",
+        chargingSchedule: {
+          duration: 3600,
+          startSchedule: new Date().toISOString(),
+          chargingRateUnit: "A",
+          chargingSchedulePeriod: [
+            { startPeriod: 0, limit: 16, numberPhases: 1 }
+          ]
         }
-    } else {
-        btn.innerHTML = '<i class="fas fa-pause"></i>';
-        btn.title = 'Scroll automático: DESLIGADO';
-        btn.className = 'control-btn danger';
+      }
+    } }
+  ];
+
+  function fillActions(){
+    const sel = document.getElementById("action");
+    sel.innerHTML = "";
+    const groups = [...new Set(COMMANDS.map(c => c.group))];
+
+    for (const g of groups){
+      const og = document.createElement("optgroup");
+      og.label = g;
+      COMMANDS.filter(c => c.group === g).forEach(c => {
+        const op = document.createElement("option");
+        op.value = c.action;
+        op.textContent = c.action;
+        og.appendChild(op);
+      });
+      sel.appendChild(og);
     }
-}
-
-
-
-            startPolling() {
-                setInterval(() => {
-                    if (!this.isPaused) {
-                        this.fetchNewMessages();
-                    }
-                }, 2000);
-            }
-
-            simulateInitialData() {
-                const initialLogs = `[OCPP IN] 2222233333 CALL action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua payload={}
-[ONLINE] 2222233333 agora ONLINE (Heartbeat)
-[OCPP OUT] 2222233333 CALLRESULT action=Heartbeat id=Q5LQR8kCIP+Ofk2DG1Ua
-[OCPP OUT] 2222233333 CALL TriggerMessage id=051a0d8306f5419ba5dea406 ok=true (via HTTP)
-[OCPP IN] 2222233333 CALL action=StatusNotification id=eYjhfHdiCh+EqpyvAp46 payload={"connectorId":0,"errorCode":"NoError","status":"Available","timestamp":"2026-01-10T03:06:29Z"}
-[OCPP OUT] 2222233333 CALLRESULT action=StatusNotification id=eYjhfHdiCh+EqpyvAp46
-[METER] 2222233333 {"serialNumber":"2222233333","connectorId":1,"transactionId":null,"ts":"2026-01-10T03:30:58.007Z","points":[{"timestamp":"2026-01-10T03:30:57Z","value":"2280","measurand":"Energy.Active.Import.Register","unit":"Wh","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0.00","measurand":"Current.Import","unit":"A","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"255","measurand":"SoC","unit":"Percent","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"37","measurand":"Temperature","unit":"Celsius","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0.00","measurand":"Voltage","unit":"V","phase":null,"location":null,"context":"Trigger","format":null},{"timestamp":"2026-01-10T03:30:57Z","value":"0","measurand":"Power.Active.Import","unit":"W","phase":null,"location":null,"context":"Trigger","format":null}]}`;
-
-                const lines = initialLogs.split('\n');
-                lines.forEach(line => {
-                    if (line.trim()) {
-                        this.parseAndAddMessage(line);
-                    }
-                });
-            }
-
-            async fetchNewMessages() {
-                try {
-                    this.simulateNewMessage();
-                    this.updateStats();
-                } catch (error) {
-                    console.error('Error fetching messages:', error);
-                }
-            }
-
-            simulateNewMessage() {
-                const messageTypes = [
-                    {
-                        type: 'OCPP IN',
-                        content: `[OCPP IN] 2222233333 CALL action=Heartbeat id=${this.generateId()} payload={}`,
-                        action: 'Heartbeat'
-                    },
-                    {
-                        type: 'OCPP OUT',
-                        content: `[OCPP OUT] 2222233333 CALLRESULT action=Heartbeat id=${this.generateId()}`,
-                        action: 'Heartbeat'
-                    },
-                    {
-                        type: 'METER',
-                        content: `[METER] 2222233333 {"serialNumber":"2222233333","connectorId":1,"transactionId":null,"ts":"${new Date().toISOString()}","points":[{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${Math.floor(Math.random() * 3000)}","measurand":"Energy.Active.Import.Register","unit":"Wh","phase":null,"location":null,"context":"Sample.Periodic","format":null},{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${(Math.random() * 32).toFixed(2)}","measurand":"Current.Import","unit":"A","phase":null,"location":null,"context":"Sample.Periodic","format":null},{"timestamp":"${new Date().toISOString().slice(0,19)}Z","value":"${Math.floor(Math.random() * 100)}","measurand":"SoC","unit":"Percent","phase":null,"location":null,"context":"Sample.Periodic","format":null}]}`,
-                        action: 'MeterValues'
-                    }
-                ];
-
-                const msg = messageTypes[Math.floor(Math.random() * messageTypes.length)];
-                this.parseAndAddMessage(msg.content);
-            }
-
-            generateId() {
-                return Math.random().toString(36).substr(2, 9);
-            }
-
-    parseAndAddMessage(rawMessage) {
-    const message = this.parseMessage(rawMessage);
-    if (message) {
-        this.messages.push(message);
-        if (message.serial) {
-            this.devices.add(message.serial);
-            this.updateDeviceList();
-        }
-        this.renderMessages();
-        
-        // REMOVER esta chamada - o scroll já é tratado no renderMessages()
-        // if (this.autoScroll) {
-        //     setTimeout(() => this.scrollToBottom(), 50);
-        // }
-    }
-}
-
-            parseMessage(rawMessage) {
-                const timestamp = new Date().toLocaleTimeString();
-                
-                let serial = null;
-                const serialMatch = rawMessage.match(/\[.*?\] (\d+)/);
-                if (serialMatch) {
-                    serial = serialMatch[1];
-                }
-
-                let type = 'OTHER';
-                let action = null;
-                
-                if (rawMessage.includes('[OCPP IN]')) {
-                    type = 'OCPP IN';
-                    const actionMatch = rawMessage.match(/action=(\w+)/);
-                    action = actionMatch ? actionMatch[1] : null;
-                } else if (rawMessage.includes('[OCPP OUT]')) {
-                    type = 'OCPP OUT';
-                    const actionMatch = rawMessage.match(/action=(\w+)/);
-                    action = actionMatch ? actionMatch[1] : null;
-                } else if (rawMessage.includes('[METER]')) {
-                    type = 'METER';
-                    action = 'MeterValues';
-                } else if (rawMessage.includes('[STATUS]') || rawMessage.includes('StatusNotification')) {
-                    type = 'STATUS';
-                    action = 'StatusNotification';
-                } else if (rawMessage.includes('[TXN]') || rawMessage.includes('Transaction')) {
-                    type = 'TXN';
-                    action = rawMessage.includes('StartTransaction') ? 'StartTransaction' : 'StopTransaction';
-                } else if (rawMessage.includes('[WS]')) {
-                    type = 'WS';
-                    action = 'WebSocket';
-                } else if (rawMessage.includes('[COMMAND]')) {
-                    type = 'COMMAND';
-                    action = 'Command';
-                }
-
-                let jsonData = null;
-                try {
-                    const jsonMatch = rawMessage.match(/\{[\s\S]*\}$/);
-                    if (jsonMatch) {
-                        jsonData = JSON.parse(jsonMatch[0]);
-                    }
-                } catch (e) {}
-
-                return {
-                    id: Date.now() + Math.random(),
-                    raw: rawMessage,
-                    type,
-                    action,
-                    serial,
-                    timestamp,
-                    jsonData,
-                    parsed: this.parseMessageDetails(rawMessage, type, jsonData)
-                };
-            }
-
-            parseMessageDetails(raw, type, jsonData) {
-                const details = {};
-                
-                switch(type) {
-                    case 'METER':
-                        if (jsonData) {
-                            details.connectorId = jsonData.connectorId;
-                            details.transactionId = jsonData.transactionId;
-                            details.timestamp = jsonData.ts;
-                            details.points = jsonData.points || [];
-                        }
-                        break;
-                        
-                    case 'OCPP IN':
-                    case 'OCPP OUT':
-                        const actionMatch = raw.match(/action=(\w+)/);
-                        const idMatch = raw.match(/id=([^\s]+)/);
-                        const forMatch = raw.match(/for=(\w+)/);
-                        
-                        if (actionMatch) details.action = actionMatch[1];
-                        if (idMatch) details.messageId = idMatch[1];
-                        if (forMatch) details.forAction = forMatch[1];
-                        break;
-                }
-                
-                return details;
-            }
-
-renderMessages() {
-  const container = document.getElementById('messagesList');
-  const filtered = this.getFilteredMessages();
-
-  const wasNearBottom =
-    (container.scrollHeight - container.scrollTop - container.clientHeight) < 80;
-
-  const prevScrollTop = container.scrollTop;
-
-  container.innerHTML = '';
-  for (const msg of filtered) {
-    container.appendChild(this.createMessageElement(msg));
   }
 
-  this.updateFilteredCount(filtered.length);
+  function getTemplate(action){
+    const found = COMMANDS.find(c => c.action === action);
+    return found ? found.tpl : {};
+  }
 
-  requestAnimationFrame(() => {
-    if (this.autoScroll && wasNearBottom) {
-      // auto-scroll ligado: vai pro fim
-      container.scrollTop = container.scrollHeight;
-    } else {
-      // scroll estático: mantém onde o usuário estava
-      container.scrollTop = prevScrollTop;
+  // =========================
+  // Status
+  // =========================
+  function setPill(state){
+    const pill = document.getElementById("statusPill");
+    const text = document.getElementById("statusText");
+    pill.classList.remove("ok","bad","warn");
+    pill.classList.add(state);
+    text.textContent = (state === "ok") ? "gateway ok" : (state === "warn" ? "parcial" : "gateway erro");
+  }
+
+  async function loadConfig(){
+    try{
+      const r = await fetch("/api/config");
+      const j = await r.json();
+      document.getElementById("gw").textContent = j.gatewayUrl || "(indefinido)";
+    }catch(e){
+      document.getElementById("gw").textContent = "(erro lendo config)";
     }
-  });
-}
+  }
 
+  // =========================
+  // Clients
+  // =========================
+  let clientsRaw = [];
+  async function refreshClients(){
+    try{
+      const r = await fetch("/api/clients");
+      const j = await r.json();
+      const list = Array.isArray(j) ? j : (j.clients || []);
+      clientsRaw = list;
+      setPill("ok");
+      renderClients();
+    }catch(e){
+      clientsRaw = [];
+      setPill("bad");
+      renderClients();
+    }
+  }
 
-            createMessageElement(msg) {
-                const div = document.createElement('div');
-                div.className = 'message-item';
-                div.dataset.type = msg.type;
-                
-                let formattedContent = msg.raw;
-                try {
-                    const jsonMatch = msg.raw.match(/\{[\s\S]*\}$/);
-                    if (jsonMatch) {
-                        const jsonStr = jsonMatch[0];
-                        const parsed = JSON.parse(jsonStr);
-                        formattedContent = msg.raw.replace(jsonStr, JSON.stringify(parsed, null, 2));
-                    }
-                } catch (e) {}
-                
-                let badgeClass = '';
-                switch(msg.type) {
-                    case 'OCPP IN': badgeClass = 'ocpp-in'; break;
-                    case 'OCPP OUT': badgeClass = 'ocpp-out'; break;
-                    case 'METER': badgeClass = 'meter'; break;
-                    case 'STATUS': badgeClass = 'status'; break;
-                    case 'TXN': badgeClass = 'txn'; break;
-                    case 'WS': badgeClass = 'ws'; break;
-                    case 'COMMAND': badgeClass = 'command'; break;
-                }
-                
-                let html = `
-                    <div class="message-header">
-                        <div class="message-type">
-                            <span class="message-badge ${badgeClass}">${msg.type}</span>
-                            ${msg.serial ? `<span class="detail-value">${msg.serial}</span>` : ''}
-                            ${msg.action ? `<span style="color: var(--text-muted);">• ${msg.action}</span>` : ''}
-                        </div>
-                        <div class="message-time">${msg.timestamp}</div>
-                    </div>
-                    <div class="message-content">${this.escapeHtml(formattedContent)}</div>
-                `;
-                
-                if (msg.type === 'METER' && msg.jsonData && msg.jsonData.points) {
-                    html += this.createMeterDetails(msg.jsonData.points);
-                }
-                
-                div.innerHTML = html;
-                return div;
-            }
+  function normalizeSerial(x){
+    if (typeof x === "string") return x;
+    if (!x || typeof x !== "object") return String(x ?? "");
+    return x.serialNumber || x.chargePointId || x.id || x.sn || "[obj]";
+  }
 
-            createMeterDetails(points) {
-                const importantPoints = points.filter(p => 
-                    ['Energy.Active.Import.Register', 'Power.Active.Import', 'SoC', 
-                     'Current.Import', 'Voltage', 'Temperature'].includes(p.measurand)
-                );
-                
-                if (importantPoints.length === 0) return '';
-                
-                let html = '<div class="meter-details">';
-                importantPoints.forEach(point => {
-                    const label = this.getMeasurandLabel(point.measurand);
-                    html += `
-                        <div class="meter-point">
-                            <div class="meter-measurand">${label}</div>
-                            <div class="meter-value">
-                                ${point.value}
-                                <span class="meter-unit">${point.unit}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                return html;
-            }
+  function renderClients(){
+    const body = document.getElementById("clientsBody");
+    const q = (document.getElementById("search").value || "").trim().toLowerCase();
 
-            getMeasurandLabel(measurand) {
-                const labels = {
-                    'Energy.Active.Import.Register': 'Energia Total',
-                    'Power.Active.Import': 'Potência',
-                    'SoC': 'Estado de Carga',
-                    'Current.Import': 'Corrente',
-                    'Voltage': 'Tensão',
-                    'Temperature': 'Temperatura'
-                };
-                return labels[measurand] || measurand;
-            }
+    const list = clientsRaw.map(normalizeSerial).filter(Boolean);
+    const filtered = q ? list.filter(s => s.toLowerCase().includes(q)) : list;
 
-            escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
+    document.getElementById("onlineCount").textContent = String(filtered.length);
 
-            getFilteredMessages() {
-                return this.messages.filter(msg => {
-                    if (this.currentFilters.type !== 'all' && msg.type !== this.currentFilters.type) {
-                        return false;
-                    }
-                    
-                    if (this.currentFilters.serial !== 'all' && msg.serial !== this.currentFilters.serial) {
-                        return false;
-                    }
-                    
-                    if (this.currentFilters.action !== 'all' && msg.action !== this.currentFilters.action) {
-                        return false;
-                    }
-                    
-                    return true;
-                });
-            }
+    if(!filtered.length){
+      body.innerHTML = '<tr><td colspan="2" class="muted">Nenhum carregador online</td></tr>';
+      return;
+    }
 
-            updateStats() {
-                document.getElementById('totalMessages').textContent = this.messages.length;
-                document.getElementById('totalDevices').textContent = this.devices.size;
-                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-            }
+    body.innerHTML = filtered.map(sn => `
+      <tr>
+        <td>
+          <b style="cursor:pointer" onclick="pickSerial('${escapeHtml(sn)}')">${escapeHtml(sn)}</b>
+          <div class="muted small">via gateway</div>
+        </td>
+        <td>
+          <div class="btns">
+            <button onclick="quick('${escapeHtml(sn)}','Status')">Trigger Status</button>
+            <button onclick="quick('${escapeHtml(sn)}','Meter')">Trigger Meter</button>
+            <button onclick="quick('${escapeHtml(sn)}','SoftReset')">Soft Reset</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
 
-            updateFilteredCount(count) {
-                document.getElementById('filteredCount').textContent = `Mostrando ${count} mensagens`;
-            }
+  function pickSerial(sn){
+    document.getElementById("serial").value = sn;
+  }
 
-            updateDeviceList() {
-                const container = document.getElementById('serialList');
-                const filter = document.getElementById('serialFilter');
-                
-                container.innerHTML = '';
-                const filterOptions = Array.from(filter.querySelectorAll('option')).slice(1);
-                filterOptions.forEach(opt => opt.remove());
-                
-                this.devices.forEach(serial => {
-                    const item = document.createElement('div');
-                    item.className = 'serial-item';
-                    item.onclick = () => {
-                        document.getElementById('targetSerial').value = serial;
-                    };
-                    item.innerHTML = `
-                        <div class="serial-header">
-                            <div class="serial-id">${serial}</div>
-                            <div class="serial-status"></div>
-                        </div>
-                        <div style="color: var(--text-muted); font-size: 0.875rem;">
-                            Clique para usar
-                        </div>
-                    `;
-                    container.appendChild(item);
-                    
-                    const option = document.createElement('option');
-                    option.value = serial;
-                    option.textContent = serial;
-                    filter.appendChild(option);
-                });
-            }
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
 
-            clearMessages() {
-                this.messages = [];
-                this.devices.clear();
-                this.updateDeviceList();
-                this.renderMessages();
-                this.updateStats();
-            }
+  // =========================
+  // Command send
+  // =========================
+  function applyTemplate(){
+    const action = document.getElementById("action").value;
+    const tpl = getTemplate(action);
+    document.getElementById("payload").value = JSON.stringify(tpl || {}, null, 2);
+    document.getElementById("tplName").textContent = action;
+    document.getElementById("hint").textContent = "template aplicado";
+  }
 
-            togglePause() {
-                this.isPaused = !this.isPaused;
-                const btn = document.getElementById('pauseBtn');
-                if (this.isPaused) {
-                    btn.innerHTML = '<i class="fas fa-play"></i>';
-                    btn.title = 'Continuar atualização';
-                } else {
-                    btn.innerHTML = '<i class="fas fa-pause"></i>';
-                    btn.title = 'Pausar atualização';
-                }
-            }
+  function clearPayload(){
+    document.getElementById("payload").value = "{}";
+    document.getElementById("hint").textContent = "payload limpo";
+  }
 
-            updatePollInterval(interval) {
-                console.log('Polling interval updated to:', interval);
-            }
+  function copyPayload(){
+    const txt = document.getElementById("payload").value || "";
+    navigator.clipboard?.writeText(txt);
+    document.getElementById("hint").textContent = "payload copiado";
+  }
 
-            addCommandMessage(command, response) {
-                const message = `[COMMAND] ${command.serialNumber} ${command.action} ${JSON.stringify(command.payload)}`;
-                const responseMessage = `[RESPONSE] ${JSON.stringify(response, null, 2)}`;
-                
-                this.parseAndAddMessage(message);
-                
-                // Add response as a separate message
-                setTimeout(() => {
-                    this.parseAndAddMessage(responseMessage);
-                }, 500);
-            }
-        }
+  async function sendCmd(){
+    const serialNumber = (document.getElementById("serial").value || "").trim();
+    const action = document.getElementById("action").value;
 
-        class CommandPanel {
-            constructor() {
-                this.templates = {
-                    RemoteStartTransaction: {
-                        idTag: "TARGET001",
-                        connectorId: 1
-                    },
-                    RemoteStopTransaction: {
-                        transactionId: 12345
-                    },
-                    UnlockConnector: {
-                        connectorId: 1
-                    },
-                    Reset: {
-                        type: "Soft"
-                    },
-                    ChangeAvailability: {
-                        connectorId: 1,
-                        type: "Operative"
-                    },
-                    GetConfiguration: {
-                        key: []
-                    },
-                    ChangeConfiguration: {
-                        key: "HeartbeatInterval",
-                        value: "60"
-                    },
-                    TriggerMessage: {
-                        requestedMessage: "StatusNotification",
-                        connectorId: 1
-                    },
-                    GetDiagnostics: {
-                        location: "https://ocpptarget.cloud/diag",
-                        retries: 1,
-                        retryInterval: 60
-                    },
-                    UpdateFirmware: {
-                        location: "https://ocpptarget.cloud/fw.bin",
-                        retries: 1,
-                        retryInterval: 60,
-                        retrieveDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-                    },
-                    ReserveNow: {
-                        connectorId: 1,
-                        expiryDate: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                        idTag: "TARGET001",
-                        reservationId: 101
-                    },
-                    CancelReservation: {
-                        reservationId: 101
-                    },
-                    GetLocalListVersion: {},
-                    SendLocalList: {
-                        listVersion: 1,
-                        updateType: "Full",
-                        localAuthorizationList: [
-                            { idTag: "TARGET001", idTagInfo: { status: "Accepted" } }
-                        ]
-                    }
-                };
-            }
+    if(!serialNumber){
+      document.getElementById("resp").textContent = "Informe o serialNumber.";
+      return;
+    }
 
-            loadTemplate() {
-                const action = document.getElementById('commandAction').value;
-                if (action && this.templates[action]) {
-                    const template = this.templates[action];
-                    document.getElementById('commandPayload').value = JSON.stringify(template, null, 2);
-                }
-            }
+    let payload = {};
+    try{
+      payload = JSON.parse(document.getElementById("payload").value || "{}");
+    }catch(e){
+      document.getElementById("resp").textContent = "Payload JSON inválido.";
+      return;
+    }
 
-            async sendCommand() {
-                const serialNumber = document.getElementById('targetSerial').value.trim();
-                const action = document.getElementById('commandAction').value;
-                let payload = {};
-                
-                if (!serialNumber) {
-                    this.showResponse('❌ Informe o serial do dispositivo', true);
-                    return;
-                }
-                
-                if (!action) {
-                    this.showResponse('❌ Selecione uma ação OCPP', true);
-                    return;
-                }
-                
-                try {
-                    payload = JSON.parse(document.getElementById('commandPayload').value || '{}');
-                } catch (e) {
-                    this.showResponse('❌ Payload JSON inválido: ' + e.message, true);
-                    return;
-                }
-                
-                const command = {
-                    serialNumber,
-                    action,
-                    payload
-                };
-                
-                this.showResponse('⏳ Enviando comando...', false);
-                document.getElementById('sendCommandBtn').disabled = true;
-                
-                try {
-                    // Simulate API call
-                    await this.simulateApiCall(command);
-                    
-                    // Add to messages list
-                    window.dashboard.addCommandMessage(command, {
-                        status: "Accepted",
-                        timestamp: new Date().toISOString(),
-                        messageId: this.generateId()
-                    });
-                    
-                    this.showResponse('✅ Comando enviado com sucesso!\nStatus: Accepted\n' + 
-                                    `ID: ${this.generateId()}\n` +
-                                    `Timestamp: ${new Date().toLocaleTimeString()}`, false);
-                } catch (error) {
-                    this.showResponse(`❌ Erro: ${error.message}`, true);
-                } finally {
-                    document.getElementById('sendCommandBtn').disabled = false;
-                }
-            }
+    try{
+      const r = await fetch("/api/send", {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ serialNumber, action, payload })
+      });
+      const txt = await r.text();
+      document.getElementById("resp").textContent = txt;
+    }catch(e){
+      document.getElementById("resp").textContent = String(e?.message || e);
+    }
+  }
 
-            async simulateApiCall(command) {
-                // Simulate network delay
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve({
-                            ok: true,
-                            status: "Accepted",
-                            timestamp: new Date().toISOString()
-                        });
-                    }, 1000);
-                });
-            }
+  async function quick(sn, type){
+    pickSerial(sn);
+    if(type === "Status"){
+      document.getElementById("action").value = "TriggerMessage";
+      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"StatusNotification", connectorId:1 }, null, 2);
+    }
+    if(type === "Meter"){
+      document.getElementById("action").value = "TriggerMessage";
+      document.getElementById("payload").value = JSON.stringify({ requestedMessage:"MeterValues", connectorId:1 }, null, 2);
+    }
+    if(type === "SoftReset"){
+      document.getElementById("action").value = "Reset";
+      document.getElementById("payload").value = JSON.stringify({ type:"Soft" }, null, 2);
+    }
+    await sendCmd();
+  }
 
-            triggerStatus() {
-                document.getElementById('commandAction').value = 'TriggerMessage';
-                document.getElementById('commandPayload').value = JSON.stringify({
-                    requestedMessage: "StatusNotification",
-                    connectorId: 1
-                }, null, 2);
-            }
+  // =========================
+  // Logs (sem cortar início)
+  // =========================
+  let logTimer = null;
+  let lastRendered = ""; // para modo "Somente novos"
 
-            triggerMeter() {
-                document.getElementById('commandAction').value = 'TriggerMessage';
-                document.getElementById('commandPayload').value = JSON.stringify({
-                    requestedMessage: "MeterValues",
-                    connectorId: 1
-                }, null, 2);
-            }
+  function resetLogState(){
+    lastRendered = "";
+    loadLogs(true);
+  }
 
-            softReset() {
-                document.getElementById('commandAction').value = 'Reset';
-                document.getElementById('commandPayload').value = JSON.stringify({
-                    type: "Soft"
-                }, null, 2);
-            }
+  function setLogPoll(){
+    if (logTimer) clearInterval(logTimer);
+    const sec = Number(document.getElementById("logPollSec").value || "2");
+    loadLogs(false);
+    logTimer = setInterval(() => loadLogs(false), sec * 1000);
+  }
 
-            hardReset() {
-                document.getElementById('commandAction').value = 'Reset';
-                document.getElementById('commandPayload').value = JSON.stringify({
-                    type: "Hard"
-                }, null, 2);
-            }
+  function clearLogsBox(){
+    document.getElementById("logsBox").textContent = "";
+    lastRendered = "";
+  }
 
-            showResponse(message, isError) {
-                const responseBox = document.getElementById('commandResponse');
-                responseBox.textContent = message;
-                responseBox.style.color = isError ? 'var(--danger)' : 'var(--success)';
-            }
+  async function loadLogs(force){
+    const t = document.getElementById("logType").value;
+    let j;
+    try{
+      const r = await fetch(`/api/logs/${t}`);
+      j = await r.json();
+    }catch(e){
+      return;
+    }
+    if (!j?.ok) return;
 
-            copyResponse() {
-                const response = document.getElementById('commandResponse').textContent;
-                navigator.clipboard.writeText(response).then(() => {
-                    this.showResponse('✅ Resposta copiada para a área de transferência!', false);
-                    setTimeout(() => this.showResponse('', false), 2000);
-                });
-            }
+    const box = document.getElementById("logsBox");
+    const current = String(j.log || "");
 
-            generateId() {
-                return Math.random().toString(36).substr(2, 9);
-            }
-        }
+    const mode = document.getElementById("logMode").value;
 
-        // Initialize the dashboard and command panel
-        document.addEventListener('DOMContentLoaded', () => {
-            window.dashboard = new OCPPDashboard();
-            window.commandPanel = new CommandPanel();
-            
-            // Load initial template
-            commandPanel.loadTemplate();
-        });
+    if (mode === "full"){
+      // ✅ sempre renderiza o retorno completo (não corta início)
+      if (force || box.textContent !== current){
+        box.textContent = current;
+        box.scrollTop = 0; // topo
+      }
+      lastRendered = current;
+      return;
+    }
 
+    // mode === "new"
+    // ✅ adiciona apenas o que é novo, mas sem assumir que tail mantém o começo
+    // estratégia: se o retorno atual NÃO contém o lastRendered, resetamos e mostramos tudo como novo
+    if (!lastRendered){
+      box.textContent = current;
+      box.scrollTop = 0;
+      lastRendered = current;
+      return;
+    }
 
+    if (current.includes(lastRendered)){
+      const newPart = current.slice(current.indexOf(lastRendered) + lastRendered.length).trim();
+      if (newPart){
+        box.textContent = (newPart + "\n\n" + box.textContent).trim();
+        box.scrollTop = 0;
+      }
+      lastRendered = current;
+    }else{
+      // tail “andou” e o início mudou: evita bug de corte
+      box.textContent = current + "\n\n" + box.textContent;
+      box.scrollTop = 0;
+      lastRendered = current;
+    }
+  }
 
-        
-    </script>
+  // =========================
+  // Poll / init
+  // =========================
+  let pollTimer = null;
+  function setPoll(){
+    if (pollTimer) clearInterval(pollTimer);
+    const sec = Number(document.getElementById("pollSec").value || "3");
+    refreshClients();
+    pollTimer = setInterval(refreshClients, sec * 1000);
+  }
+
+  fillActions();
+  loadConfig();
+  applyTemplate();
+  setPoll();
+  setLogPoll();
+</script>
 </body>
 </html>
