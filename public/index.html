@@ -978,7 +978,7 @@
     parseAndAddMessage(rawMessage) {
     const message = this.parseMessage(rawMessage);
     if (message) {
-        this.messages.unshift(message);
+        this.messages.push(message);
         if (message.serial) {
             this.devices.add(message.serial);
             this.updateDeviceList();
@@ -1077,27 +1077,33 @@
                 return details;
             }
 
-    renderMessages() {
-    const container = document.getElementById('messagesList');
-    const filtered = this.getFilteredMessages();
-    
-    // Salva a posição atual do scroll ANTES de limpar
-    const scrollPosition = container.scrollTop;
-    
-    // Salva o conteúdo atual para comparar depois
-    const currentContent = container.innerHTML;
-    
-    // Renderiza as mensagens
-    container.innerHTML = '';
-    
-    filtered.forEach(msg => {
-        const element = this.createMessageElement(msg);
-        container.appendChild(element);
-    });
-    
-    this.updateFilteredCount(filtered.length);
-    
-  };
+renderMessages() {
+  const container = document.getElementById('messagesList');
+  const filtered = this.getFilteredMessages();
+
+  const wasNearBottom =
+    (container.scrollHeight - container.scrollTop - container.clientHeight) < 80;
+
+  const prevScrollTop = container.scrollTop;
+
+  container.innerHTML = '';
+  for (const msg of filtered) {
+    container.appendChild(this.createMessageElement(msg));
+  }
+
+  this.updateFilteredCount(filtered.length);
+
+  requestAnimationFrame(() => {
+    if (this.autoScroll && wasNearBottom) {
+      // auto-scroll ligado: vai pro fim
+      container.scrollTop = container.scrollHeight;
+    } else {
+      // scroll estático: mantém onde o usuário estava
+      container.scrollTop = prevScrollTop;
+    }
+  });
+}
+
 
             createMessageElement(msg) {
                 const div = document.createElement('div');
