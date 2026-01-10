@@ -891,31 +891,35 @@
                 });
             }
 
-            toggleAutoScroll() {
-                this.autoScroll = !this.autoScroll;
-                const btn = document.getElementById('autoScrollBtn');
-                
-                if (this.autoScroll) {
-                    btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                    btn.title = 'Scroll automático: LIGADO';
-                    btn.className = 'control-btn success';
-                    // Rola para baixo ao ativar
-                    this.scrollToBottom();
-                } else {
-                    btn.innerHTML = '<i class="fas fa-pause"></i>';
-                    btn.title = 'Scroll automático: DESLIGADO';
-                    btn.className = 'control-btn danger';
-                }
-            }
+   toggleAutoScroll() {
+    this.autoScroll = !this.autoScroll;
+    const btn = document.getElementById('autoScrollBtn');
+    const container = document.getElementById('messagesList');
+    
+    if (this.autoScroll) {
+        btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        btn.title = 'Scroll automático: LIGADO';
+        btn.className = 'control-btn success';
+        // Só rola para baixo se o usuário já está perto do final
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        if (isNearBottom) {
+            this.scrollToBottom();
+        }
+    } else {
+        btn.innerHTML = '<i class="fas fa-pause"></i>';
+        btn.title = 'Scroll automático: DESLIGADO';
+        btn.className = 'control-btn danger';
+    }
+}
 
-            scrollToBottom() {
-                if (this.autoScroll) {
-                    const container = document.getElementById('messagesList');
-                    setTimeout(() => {
-                        container.scrollTop = container.scrollHeight;
-                    }, 10);
-                }
-            }
+        scrollToBottom() {
+    if (this.autoScroll) {
+        const container = document.getElementById('messagesList');
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 10);
+    }
+}
 
             startPolling() {
                 setInterval(() => {
@@ -978,22 +982,22 @@
                 return Math.random().toString(36).substr(2, 9);
             }
 
-            parseAndAddMessage(rawMessage) {
-                const message = this.parseMessage(rawMessage);
-                if (message) {
-                    this.messages.unshift(message);
-                    if (message.serial) {
-                        this.devices.add(message.serial);
-                        this.updateDeviceList();
-                    }
-                    this.renderMessages();
-                    
-                    // Scroll automático para novas mensagens
-                    if (this.autoScroll) {
-                        setTimeout(() => this.scrollToBottom(), 50);
-                    }
-                }
-            }
+    parseAndAddMessage(rawMessage) {
+    const message = this.parseMessage(rawMessage);
+    if (message) {
+        this.messages.unshift(message);
+        if (message.serial) {
+            this.devices.add(message.serial);
+            this.updateDeviceList();
+        }
+        this.renderMessages();
+        
+        // REMOVER esta chamada - o scroll já é tratado no renderMessages()
+        // if (this.autoScroll) {
+        //     setTimeout(() => this.scrollToBottom(), 50);
+        // }
+    }
+}
 
             parseMessage(rawMessage) {
                 const timestamp = new Date().toLocaleTimeString();
@@ -1080,33 +1084,40 @@
                 return details;
             }
 
-            renderMessages() {
-                const container = document.getElementById('messagesList');
-                const filtered = this.getFilteredMessages();
-                
-                // Salva a posição atual do scroll
-                const scrollPosition = container.scrollTop;
-                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-                
-                container.innerHTML = '';
-                
-                filtered.forEach(msg => {
-                    const element = this.createMessageElement(msg);
-                    container.appendChild(element);
-                });
-                
-                this.updateFilteredCount(filtered.length);
-                
-                // Aplica scroll automático apenas se estava perto do final
-                if (this.autoScroll && isNearBottom) {
-                    setTimeout(() => {
-                        container.scrollTop = container.scrollHeight;
-                    }, 10);
-                } else {
-                    // Mantém a posição atual do scroll
-                    container.scrollTop = scrollPosition;
-                }
-            }
+    renderMessages() {
+    const container = document.getElementById('messagesList');
+    const filtered = this.getFilteredMessages();
+    
+    // Salva a posição atual do scroll ANTES de limpar
+    const scrollPosition = container.scrollTop;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    // Salva o conteúdo atual para comparar depois
+    const currentContent = container.innerHTML;
+    
+    // Renderiza as mensagens
+    container.innerHTML = '';
+    
+    filtered.forEach(msg => {
+        const element = this.createMessageElement(msg);
+        container.appendChild(element);
+    });
+    
+    this.updateFilteredCount(filtered.length);
+    
+    // Aplica scroll automático apenas se estava perto do final E está ativado
+    if (this.autoScroll && isNearBottom) {
+        // Aguarda um tick para o DOM atualizar
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 10);
+    } else if (!this.autoScroll) {
+        // Quando scroll automático está DESLIGADO, mantém a posição
+        setTimeout(() => {
+            container.scrollTop = scrollPosition;
+        }, 10);
+    }
+}
 
             createMessageElement(msg) {
                 const div = document.createElement('div');
@@ -1486,6 +1497,10 @@
             // Load initial template
             commandPanel.loadTemplate();
         });
+
+
+
+        
     </script>
 </body>
 </html>
