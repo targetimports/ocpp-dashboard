@@ -321,11 +321,8 @@
     { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
     { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
     { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
-    { group:"Core", action:"Reset soft", tpl:{ type:"Soft" } },
-   { group:"Core", action:"Reset hard", tpl:{ type:"Hard" } },
-     { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Available" } },
-     { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Unavailable" } },
-    
+    { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
+    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
     { group:"Core", action:"ClearCache", tpl:{} },
     { group:"Core", action:"GetConfiguration", tpl:{ key:[] } },
     { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
@@ -335,16 +332,6 @@
     { group:"Firmware", action:"UpdateFirmware", tpl:{ location:"https://ocpptarget.cloud/fw.bin", retries:1, retryInterval:60, retrieveDate:new Date(Date.now()+5*60*1000).toISOString() } },
 
     { group:"Trigger", action:"TriggerMessage", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
-// =========================
-// TriggerMessage — OCPP 1.6J (OFICIAL)
-// =========================
-{ group:"Trigger", action:"StatusNotification", tpl:{ requestedMessage:"StatusNotification", connectorId:1 } },
-{ group:"Trigger", action:"MeterValues", tpl:{ requestedMessage:"MeterValues", connectorId:1 } },
-{ group:"Trigger", action:"Heartbeat", tpl:{ requestedMessage:"Heartbeat", connectorId:0 } },
-{ group:"Trigger", action:"BootNotification", tpl:{ requestedMessage:"BootNotification", connectorId:0 } },
-
-{ group:"Trigger", action:"DiagnosticsStatusNotification", tpl:{ requestedMessage:"DiagnosticsStatusNotification", connectorId:0 } },
-{ group:"Trigger", action:"FirmwareStatusNotification", tpl:{ requestedMessage:"FirmwareStatusNotification", connectorId:0 } },
 
     { group:"Reservation", action:"ReserveNow", tpl:{ connectorId:1, expiryDate:new Date(Date.now()+30*60*1000).toISOString(), idTag:"TARGET001", reservationId:101 } },
     { group:"Reservation", action:"CancelReservation", tpl:{ reservationId:101 } },
@@ -387,19 +374,35 @@
     for (const g of groups){
       const og = document.createElement("optgroup");
       og.label = g;
-      COMMANDS.filter(c => c.group === g).forEach(c => {
+
+      COMMANDS.filter(c => c.group === g).forEach((c, idx) => {
+        // id único por template (mesma action pode ter vários templates)
+        if(!c.id){
+          const hint = (c?.tpl && typeof c.tpl === "object" && c.tpl.type) ? String(c.tpl.type) : "";
+          c.id = `${c.action}__${hint || idx}`;
+        }
+
+        // label amigável
+        const typeHint = (c?.tpl && typeof c.tpl === "object" && c.tpl.type) ? ` (${c.tpl.type})` : "";
+        c.label = c.label || (c.action + typeHint);
+
         const op = document.createElement("option");
-        op.value = c.action;
-        op.textContent = c.action;
+        op.value = c.id;              // ✅ agora escolhe o TEMPLATE, não só a action
+        op.textContent = c.label;     // ex: Reset (Soft), Reset (Hard)
         og.appendChild(op);
       });
+
       sel.appendChild(og);
     }
   }
 
-  function getTemplate(action){
-    const found = COMMANDS.find(c => c.action === action);
-    return found ? found.tpl : {};
+  function getCommandById(id){
+    return COMMANDS.find(c => c.id === id) || null;
+  }
+
+  function getTemplateById(id){
+    const c = getCommandById(id);
+    return c ? (c.tpl || {}) : {};
   }
 
   function setPill(state){
@@ -487,10 +490,12 @@
   }
 
   function applyTemplate(){
-    const action = document.getElementById("action").value;
-    const tpl = getTemplate(action);
-    document.getElementById("payload").value = JSON.stringify(tpl || {}, null, 2);
-    document.getElementById("tplName").textContent = action;
+    const id = document.getElementById("action").value; // ✅ agora é id do template
+    const c = getCommandById(id);
+    const tpl = c ? (c.tpl || {}) : {};
+
+    document.getElementById("payload").value = JSON.stringify(tpl, null, 2);
+    document.getElementById("tplName").textContent = c ? (c.label || c.action) : "—";
     document.getElementById("hint").textContent = "template aplicado";
   }
 
@@ -507,10 +512,16 @@
 
   async function sendCmd(){
     const serialNumber = (document.getElementById("serial").value || "").trim();
-    const action = document.getElementById("action").value;
+    const id = document.getElementById("action").value;   // template id
+    const cmd = getCommandById(id);
+    const action = cmd ? cmd.action : "";
 
     if(!serialNumber){
       document.getElementById("resp").textContent = "Informe o serialNumber.";
+      return;
+    }
+    if(!action){
+      document.getElementById("resp").textContent = "Selecione uma ação.";
       return;
     }
 
@@ -537,18 +548,33 @@
 
   async function quick(sn, type){
     pickSerial(sn);
+
+    const setSelectToFirst = (actionName, predicateFn) => {
+      const c = COMMANDS.find(x => x.action === actionName && (!predicateFn || predicateFn(x)));
+      if(c){
+        document.getElementById("action").value = c.id;
+      }else{
+        const any = COMMANDS.find(x => x.action === actionName);
+        if(any) document.getElementById("action").value = any.id;
+      }
+    };
+
     if(type === "Status"){
-      document.getElementById("action").value = "TriggerMessage";
+      setSelectToFirst("TriggerMessage", x => x?.tpl?.requestedMessage === "StatusNotification");
       document.getElementById("payload").value = JSON.stringify({ requestedMessage:"StatusNotification", connectorId:1 }, null, 2);
     }
     if(type === "Meter"){
-      document.getElementById("action").value = "TriggerMessage";
+      setSelectToFirst("TriggerMessage", x => x?.tpl?.requestedMessage === "MeterValues");
       document.getElementById("payload").value = JSON.stringify({ requestedMessage:"MeterValues", connectorId:1 }, null, 2);
     }
     if(type === "SoftReset"){
-      document.getElementById("action").value = "Reset";
+      setSelectToFirst("Reset", x => String(x?.tpl?.type||"").toLowerCase() === "soft");
       document.getElementById("payload").value = JSON.stringify({ type:"Soft" }, null, 2);
     }
+
+    const cmd = getCommandById(document.getElementById("action").value);
+    document.getElementById("tplName").textContent = cmd ? (cmd.label || cmd.action) : "—";
+
     await sendCmd();
   }
 
@@ -640,22 +666,11 @@
     return "other";
   }
 
-  function inferEvent(line, tag, action, json, forAction){
-    // 1) action=... (mais confiável)    // 1) action=... (mais confiável)
+  function inferEvent(line, tag, action, json){
+    // 1) action=... (mais confiável)
     if(action) return action;
 
-    // 1.1) CALLRESULT for=...
-    if(forAction) return forAction;
-
-    // 2) tags "fortes" como evento (STATUS/METER/ONLINE/LOG)
-    const tagUpper = String(tag||"").toUpperCase();
-    if(tagUpper === "STATUS") return "STATUS";
-    if(tagUpper === "METER") return "METER";
-    if(tagUpper === "ONLINE") return "ONLINE";
-    if(tagUpper === "OFFLINE") return "OFFLINE";
-    if(tagUpper === "LOG") return "LOG";
-
-    // 3) campos comuns dentro do JSON (quando gateway não escreve action=)
+    // 2) campos comuns dentro do JSON (quando gateway não escreve action=)
     if(json && typeof json === "object"){
       if(typeof json.action === "string" && json.action) return json.action;
       if(typeof json.requestedMessage === "string" && json.requestedMessage) return json.requestedMessage;
@@ -663,15 +678,18 @@
       if(typeof json.event_type === "string" && json.event_type) return json.event_type;
     }
 
-    // 4) heurísticas por TAG (WS, ERROR, Base44 etc)
-    if(tagUpper.includes("WS")) return "WS";
-    if(tagUpper.includes("ERROR")) return "ERROR";
-    if(tagUpper.includes("BASE44")) return "Base44";
+    // 3) heurísticas por TAG (WS, ERROR, Base44 etc)
+    const t = String(tag||"").toUpperCase();
+    if(t.includes("WS")) return "WS";
+    if(t.includes("ERROR")) return "ERROR";
+    if(t.includes("BASE44")) return "Base44";
 
-    // 5) tenta achar palavras-chave na linha
+    // 4) tenta achar palavras-chave na linha
     const s = String(line||"");
     if(s.includes("connected")) return "WS_CONNECTED";
     if(s.includes("close")) return "WS_CLOSE";
+    if(s.includes("ONLINE")) return "ONLINE";
+    if(s.includes("OFFLINE")) return "OFFLINE";
 
     return "";
   }
@@ -686,24 +704,14 @@
       const serial = snMatch ? snMatch[1] : "";
 
       const actionMatch = line.match(/action=([A-Za-z0-9_]+)/);
-      let action = actionMatch ? actionMatch[1] : "";
-
-      // Alguns logs vêm como: "CALL TriggerMessage" (sem action=)
-      if(!action){
-        const callActionMatch = line.match(/\bCALL\s+([A-Za-z0-9_]+)/);
-        if(callActionMatch) action = callActionMatch[1];
-      }
-
-      // Alguns CALLRESULT vêm como: "for=TriggerMessage"
-      const forMatch = line.match(/\bfor=([A-Za-z0-9_]+)/);
-      const forAction = forMatch ? forMatch[1] : "";
+      const action = actionMatch ? actionMatch[1] : "";
 
       const json = tryParseJsonFromLine(line);
       const time = extractIsoTime(line);
       const path = extractPath(line);
       const dir = directionFromTag(tag);
 
-      const event = inferEvent(line, tag, action, json, forAction);
+      const event = inferEvent(line, tag, action, json);
       return { raw: line, tag, serial, action, event, json, time, path, dir };
     });
   }
