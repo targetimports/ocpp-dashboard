@@ -323,9 +323,7 @@
     { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
     { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
      { group:"Core", action:"Reset", tpl:{ type:"Hard" } },
-    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
-        { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Available" } },
-
+    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Available" } },
     { group:"Core", action:"ClearCache", tpl:{} },
     { group:"Core", action:"GetConfiguration", tpl:{ key:[] } },
     { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
@@ -697,6 +695,66 @@
     return "";
   }
 
+  function extractPath(line){
+    // captura path="/xxxx" ou path=/xxxx
+    const m1 = String(line).match(/\bpath="?([^"\s]+)"?/);
+    if(m1) return m1[1];
+    // captura URL ws://.../xxxx
+    const m2 = String(line).match(/\b(wss?:\/\/[^\s]+)\b/);
+    if(m2){
+      try{
+        const u = new URL(m2[1]);
+        return u.pathname || "";
+      }catch{}
+    }
+    return "";
+  }
+
+  function directionFromTag(tag){
+    const t = String(tag||"").toUpperCase();
+    if(t.includes("OCPP IN")) return "in";
+    if(t.includes("OCPP OUT")) return "out";
+    return "other";
+  }
+
+  function inferEvent(line, tag, action, json, forAction){
+    // 1) action=... (mais confiável)
+    if(action) return action;
+
+    // 1.1) CALLRESULT for=...
+    if(forAction) return forAction;
+
+    // 2) tags "fortes" como evento (STATUS/METER/ONLINE/LOG)
+    const tagUpper = String(tag||"").toUpperCase();
+    if(tagUpper === "STATUS") return "STATUS";
+    if(tagUpper === "METER") return "METER";
+    if(tagUpper === "ONLINE") return "ONLINE";
+    if(tagUpper === "OFFLINE") return "OFFLINE";
+    if(tagUpper === "LOG") return "LOG";
+    if(tagUpper === "WS") return "WS";
+
+    // 3) campos comuns dentro do JSON (quando gateway não escreve action=)
+    if(json && typeof json === "object"){
+      if(typeof json.action === "string" && json.action) return json.action;
+      if(typeof json.requestedMessage === "string" && json.requestedMessage) return json.requestedMessage;
+      if(typeof json.messageId === "string" && json.messageId) return json.messageId;
+      if(typeof json.event_type === "string" && json.event_type) return json.event_type;
+      if(typeof json.type === "string" && json.type) return json.type;
+    }
+
+    // 4) heurísticas por TAG (WS, ERROR, Base44 etc)
+    if(tagUpper.includes("WS")) return "WS";
+    if(tagUpper.includes("ERROR")) return "ERROR";
+    if(tagUpper.includes("BASE44")) return "Base44";
+
+    // 5) tenta achar palavras-chave na linha
+    const s = String(line||"");
+    if(s.includes("conectado") || s.includes("connected")) return "WS_CONNECTED";
+    if(s.includes(" close ") || s.includes("WS] close") || s.includes("close")) return "WS_CLOSE";
+
+    return "";
+  }
+
   function parseLogLinesToEntries(text){
     const lines = String(text || "").split("\n").filter(l => l.trim().length);
     return lines.map(line => {
@@ -707,15 +765,25 @@
       const serial = snMatch ? snMatch[1] : "";
 
       const actionMatch = line.match(/action=([A-Za-z0-9_]+)/);
-      const action = actionMatch ? actionMatch[1] : "";
+      let action = actionMatch ? actionMatch[1] : "";
+
+      // Alguns logs vêm como: "CALL TriggerMessage" (sem action=)
+      if(!action){
+        const callActionMatch = line.match(/\bCALL\s+([A-Za-z0-9_]+)/);
+        if(callActionMatch) action = callActionMatch[1];
+      }
+
+      // Alguns CALLRESULT vêm como: "for=TriggerMessage"
+      const forMatch = line.match(/\bfor=([A-Za-z0-9_]+)/);
+      const forAction = forMatch ? forMatch[1] : "";
 
       const json = tryParseJsonFromLine(line);
       const time = extractIsoTime(line);
       const path = extractPath(line);
       const dir = directionFromTag(tag);
+      const event = inferEvent(line, tag, action, json, forAction);
 
-      const event = inferEvent(line, tag, action, json);
-      return { raw: line, tag, serial, action, event, json, time, path, dir };
+      return { raw: line, tag, serial, action, forAction, event, json, time, path, dir };
     });
   }
 
@@ -730,21 +798,23 @@
     const sel = document.getElementById("eventFilter");
     if(!sel) return;
 
-    // mantém seleção atual
     const current = sel.value || "all";
 
-    // extrai eventos únicos (action + tags relevantes)
     const set = new Set();
     for(const e of logEntriesCache){
-      if(e.event) set.add(e.event);
-      // se quiser filtrar também por tags (WS, ERROR), descomente:
-      // if(e.tag) set.add(e.tag);
+      const ev = e.event || e.action || "";
+      if(ev) set.add(ev);
+      // também aceita tags importantes como evento (caso o gateway não escreva action)
+      const t = String(e.tag||"").toUpperCase();
+      if(["LOG","STATUS","METER","ONLINE","OFFLINE","WS","ERROR"].includes(t)) set.add(t);
     }
 
-    const events = Array.from(set).sort((a,b)=>a.localeCompare(b));
-    sel.innerHTML = '<option value="all">Todos</option>' + events.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+    const events = Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = '<option value="all">Todos</option>' + events.map(x => {
+      const v = escapeHtml(x);
+      return `<option value="${v}">${v}</option>`;
+    }).join("");
 
-    // restaura se possível
     sel.value = events.includes(current) ? current : "all";
   }
 
@@ -778,7 +848,8 @@
 
       // evento (action)
       if(logFilters.event && logFilters.event !== "all"){
-        if(String(e.event || "") !== String(logFilters.event)) return false;
+        const ev = String(e.event || e.action || "").toString();
+        if(ev !== String(logFilters.event)) return false;
       }
 
       // caminho (substring, case-sensitive por padrão)
@@ -814,7 +885,7 @@
               <strong>${safeHtml(e.tag)}</strong>
             </span>
             ${e.serial ? `<span class="logSerial">${safeHtml(e.serial)}</span>` : ``}
-            ${e.event ? `<span class="logAction">• ${safeHtml(e.event)}</span>` : ``}
+            ${(e.event || e.action) ? `<span class="logAction">• ${safeHtml(e.event || e.action)}</span>` : ``}
           </div>
           <div class="muted small">${safeHtml(timeLabel)}</div>
         </div>
