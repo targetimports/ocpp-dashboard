@@ -321,8 +321,8 @@
     { group:"Core", action:"RemoteStartTransaction", tpl:{ idTag:"TARGET001", connectorId:1 } },
     { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
     { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
-    { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
-    { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
+    { group:"Core", action:"Reset soft", tpl:{ type:"Soft" } },
+   { group:"Core", action:"Reset hard", tpl:{ type:"Hard" } },
      { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Available" } },
      { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Unavailable" } },
     
