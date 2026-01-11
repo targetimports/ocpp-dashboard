@@ -322,7 +322,10 @@
     { group:"Core", action:"RemoteStopTransaction", tpl:{ transactionId:12345 } },
     { group:"Core", action:"UnlockConnector", tpl:{ connectorId:1 } },
     { group:"Core", action:"Reset", tpl:{ type:"Soft" } },
+     { group:"Core", action:"Reset", tpl:{ type:"Hard" } },
     { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Operative" } },
+        { group:"Core", action:"ChangeAvailability", tpl:{ connectorId:1, type:"Available" } },
+
     { group:"Core", action:"ClearCache", tpl:{} },
     { group:"Core", action:"GetConfiguration", tpl:{ key:[] } },
     { group:"Core", action:"ChangeConfiguration", tpl:{ key:"HeartbeatInterval", value:"60" } },
